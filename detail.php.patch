@@ -1,0 +1,84 @@
+diff --git a/includes/Views/admin/provinces/detail.php b/includes/Views/admin/provinces/detail.php
+index [old-hash]..[new-hash]
+--- a/includes/Views/admin/provinces/detail.php
++++ b/includes/Views/admin/provinces/detail.php
+@@ -13,6 +13,13 @@ if (!defined('ABSPATH')) exit;
+             </div>
+         </div>
+         <div class="ir-panel-content">
++            <!-- Tab Navigation -->
++            <div class="ir-panel-tabs">
++                <button type="button" class="ir-tab-btn active" data-tab="detail">
++                    Detail Provinsi
++                </button>
++                <button type="button" class="ir-tab-btn" data-tab="cities">
++                    Kabupaten/Kota
++                </button>
++            </div>
++
+             <!-- Loading Placeholder -->
+             <div id="provinceDetailLoading" class="ir-loading">
+                 <div class="spinner"></div>
+@@ -20,7 +27,8 @@ if (!defined('ABSPATH')) exit;
+ 
+             <!-- Detail Content -->
+             <div id="provinceDetail" class="ir-province-detail">
+-                <div class="ir-detail-content">
++                <!-- Tab Detail -->
++                <div id="tab-detail" class="ir-tab-pane active">
+                     <div class="ir-detail-stats">
+                         <div class="ir-stat-item">
+                             <label>Total Kabupaten/Kota</label>
+@@ -35,28 +43,32 @@ if (!defined('ABSPATH')) exit;
+                             <span id="updatedAt">-</span>
+                         </div>
+                     </div>
++                </div>
+ 
+-                    <!-- Tabel Kabupaten/Kota -->
+-                    <div class="ir-cities-container">
+-                        <div class="ir-cities-header">
+-                            <h3>Daftar Kabupaten/Kota</h3>
+-                            <button type="button" class="button button-primary" id="btnAddCity">
+-                                Tambah Kab/Kota
+-                            </button>
+-                        </div>
+-                        <table id="citiesTable" class="display" style="width:100%">
+-                            <thead>
+-                                <tr>
+-                                    <th>ID</th>
+-                                    <th>Nama</th>
+-                                    <th>Tipe</th>
+-                                    <th>Tanggal Dibuat</th>
+-                                    <th>Aksi</th>
+-                                </tr>
+-                            </thead>
+-                        </table>
++                <!-- Tab Cities with Loading State -->
++                <div id="tab-cities" class="ir-tab-pane">
++                    <!-- Cities Tab Loading -->
++                    <div class="ir-tab-loading">
++                        <div class="spinner"></div>
++                        <p>Memuat data kabupaten/kota...</p>
+                     </div>
+-                </div>
++                    
++                    <!-- Cities Content -->
++                    <div class="ir-cities-content" style="display: none;">
++                        <div class="ir-cities-container">
++                            <div class="ir-cities-header">
++                                <h3>Daftar Kabupaten/Kota</h3>
++                                <button type="button" class="button button-primary" id="btnAddCity">
++                                    Tambah Kab/Kota
++                                </button>
++                            </div>
++                            
++                            <!-- Table container, akan diisi via JavaScript -->
++                            <div id="citiesTableContainer"></div>
++                        </div>
++                    </div>
++                </div> <!-- End Tab Cities -->
++
+             </div>
+         </div>
+     </div>
