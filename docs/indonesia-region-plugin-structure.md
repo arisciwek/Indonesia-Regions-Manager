@@ -60,17 +60,43 @@
 ## /assets Directory
 
 ### /js/admin
-- `/assets/js/admin/FormValidator.js`
-  - Client-side form validation
-  - Handles name validation rules
-  - Provides duplicate name checking
-  - Manages validation messages
+- `/assets/js/admin/modules/`
+  - Shared utilities and functionality
+  - `cache.js` - Cache management
+  - `validator.js` - Form validation rules
+  - `api.js` - AJAX request handling
+  - `helper.js` - Helper functions
 
-- `/assets/js/admin/main.js`
-  - Main admin JavaScript functionality
-  - Manages province CRUD operations
-  - Handles UI interactions and state
-  - Implements DataTables integration
+- `/assets/js/admin/components/`
+  - Reusable UI components
+  - `/modal/`
+    - `base.js` - Base modal functionality
+    - `form.js` - Form modal extension
+  - `/table/`
+    - `base.js` - Base DataTable setup
+    - `actions.js` - Common table actions
+  - `toast.js` - Toast notifications
+  - `detail-panel.js` - Detail panel behavior
+
+- `/assets/js/admin/features/`
+  - Business feature implementations
+  - `/province/`
+    - `create.js` - Province creation
+    - `update.js` - Province updates
+    - `delete.js` - Province deletion
+    - `table.js` - Province table handling
+    - `detail.js` - Province detail view
+    - `index.js` - Province initialization
+  - `/city/` (future implementation)
+    - Similar structure as province
+
+- `/assets/js/admin/config/`
+  - `constants.js` - Application constants
+  - `settings.js` - Application settings
+
+- `/assets/js/admin/app.js`
+  - Main JavaScript initialization
+  - Bootstraps all components and features
 
 ### /css/admin
 - `/assets/css/admin/style.css`
@@ -80,11 +106,18 @@
   - Includes modal, form, and table styling
 
 ## File Organization Summary
-The plugin follows a modular MVC-like structure:
+The plugin follows a modular structure:
 - Core files handle plugin lifecycle and infrastructure
 - Controllers manage admin interfaces and AJAX requests
 - Models handle database operations and business logic
 - Views contain template files for the admin interface
-- Assets contain JavaScript and CSS files for the admin area
+- Assets contain highly modular JavaScript organization and CSS files for the admin area
 
-Each file has a specific responsibility and works together to provide a complete province management system for Indonesian regions.
+JavaScript specifically follows a feature-based organization with:
+- Shared modules for common functionality
+- Reusable UI components
+- Feature-specific implementations
+- Clear separation of concerns
+- Easy maintainability and scalability
+
+Each file has a specific responsibility and works together to provide a complete management system for Indonesian regions.

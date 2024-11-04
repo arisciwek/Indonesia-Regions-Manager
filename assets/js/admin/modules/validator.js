@@ -1,19 +1,19 @@
 (function($) {
     'use strict';
 
-    window.FormValidator = class FormValidator {
+    class Validator {
         constructor() {
             this.rules = {
                 name: {
                     minLength: 3,
                     maxLength: 100,
-                    pattern: /^[a-zA-Z\s]+$/,  // Hanya huruf dan spasi
+                    pattern: /^[a-zA-Z\s]+$/,
                     messages: {
-                        required: 'Nama provinsi tidak boleh kosong',
-                        minLength: 'Nama provinsi minimal 3 karakter',
-                        maxLength: 'Nama provinsi maksimal 100 karakter',
-                        pattern: 'Nama provinsi hanya boleh mengandung huruf dan spasi',
-                        duplicate: 'Nama provinsi sudah ada'
+                        required: 'Nama tidak boleh kosong',
+                        minLength: 'Nama minimal 3 karakter',
+                        maxLength: 'Nama maksimal 100 karakter',
+                        pattern: 'Nama hanya boleh mengandung huruf dan spasi',
+                        duplicate: 'Nama sudah ada'
                     }
                 }
             };
@@ -21,8 +21,8 @@
             this.debounceTimer = null;
         }
 
-        validateField(field, value) {
-            const rule = this.rules[field];
+        validateField(field, value, customRules = {}) {
+            const rule = { ...this.rules[field], ...customRules };
             if (!rule) return { valid: true };
 
             // Trim value
@@ -62,7 +62,7 @@
             return { valid: true };
         }
 
-        checkDuplicate(value) {
+        checkDuplicate(value, checkEndpoint, additionalData = {}) {
             return new Promise((resolve) => {
                 if (this.debounceTimer) {
                     clearTimeout(this.debounceTimer);
@@ -73,9 +73,10 @@
                         url: irSettings.ajaxurl,
                         type: 'POST',
                         data: {
-                            action: 'ir_check_province_name',
+                            action: checkEndpoint,
                             name: value,
-                            nonce: irSettings.nonce
+                            nonce: irSettings.nonce,
+                            ...additionalData
                         },
                         success: (response) => {
                             resolve({
@@ -90,6 +91,14 @@
                 }, 500); // Debounce 500ms
             });
         }
-    };
+
+        // Add method untuk custom rules
+        addRule(field, rule) {
+            this.rules[field] = { ...this.rules[field], ...rule };
+        }
+    }
+
+    // Export validator
+    window.irValidator = new Validator();
 
 })(jQuery);
