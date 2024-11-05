@@ -1,6 +1,24 @@
+/**
+ * File: assets/js/admin/features/province/create.js
+ * Version: 1.0.0
+ * Revisi-1
+ * 
+ * Changelog:
+ * - Fix double submission issue
+ * - Fix form data handling
+ * - Add proper error handling
+ * - Add debugging logs
+ * - Ensure proper modal closure after success
+ * 
+ * Dependencies:
+ * - jQuery
+ * - irFormModal
+ * - irValidator
+ * - irToast
+ */
+
 (function($) {
     'use strict';
-    //solusi-2: perbaikan create province dengan form handling yang lebih baik
 
     class ProvinceCreate {
         constructor() {
@@ -13,8 +31,9 @@
         }
 
         show() {
-            this.modal.setTitle('Tambah Provinsi');
+            // Reset form state before showing
             this.modal.resetForm();
+            this.modal.setTitle('Tambah Provinsi');
             this.modal.show();
         }
 
@@ -22,32 +41,17 @@
             const name = $form.find('#provinceName').val().trim();
             
             // Basic validation
-            if (!name) {
-                this.modal.showError('provinceName', 'Nama provinsi tidak boleh kosong');
-                return false;
-            }
-
-            // Validasi dengan validator
             const result = this.validator.validateField('name', name);
             if (!result.valid) {
                 this.modal.showError('provinceName', result.message);
                 return false;
             }
 
-            // Check duplicate jika nama valid
+            // Check duplicate if name is valid
             if (name.length >= 3) {
-                try {
-                    const dupeCheck = await this.validator.checkDuplicate(
-                        name, 
-                        irConstants.ENDPOINTS.PROVINCE.CHECK_NAME
-                    );
-                    if (!dupeCheck.valid) {
-                        this.modal.showError('provinceName', dupeCheck.message);
-                        return false;
-                    }
-                } catch (error) {
-                    console.error('Validation error:', error);
-                    irToast.error('Terjadi kesalahan saat validasi');
+                const dupeCheck = await this.validator.checkDuplicate(name, 'ir_check_province_name');
+                if (!dupeCheck.valid) {
+                    this.modal.showError('provinceName', dupeCheck.message);
                     return false;
                 }
             }
@@ -57,39 +61,55 @@
 
         async handleSave(formData) {
             try {
-                const response = await irAPI.province.create(formData);
+                // Debug log untuk tracking
+                console.log('Starting province creation...');
+                
+                // Ensure we're sending the right action
+                const data = {
+                    action: 'ir_create_province',
+                    name: formData.get('name'),
+                    nonce: irSettings.nonce
+                };
+
+                console.log('Sending data:', data);
+
+                const response = await $.ajax({
+                    url: irSettings.ajaxurl,
+                    type: 'POST',
+                    data: data,
+                    dataType: 'json'
+                });
+
+                console.log('Server response:', response);
                 
                 if (response.success) {
                     irToast.success('Provinsi berhasil ditambahkan');
                     this.modal.hide();
                     
                     // Update cache dan table
-                    irCache.remove(irConstants.CACHE_KEYS.PROVINCE);
-                    
-                    // Trigger event sukses
-                    $(document).trigger(irConstants.EVENTS.PROVINCE.CREATED, [response.data]);
-                    
-                    // Callback untuk ProvinceManager
+                    irCache.remove('provinces');
                     if (typeof this.onSuccess === 'function') {
                         this.onSuccess(response.data);
                     }
                 } else {
-                    // Handle error spesifik field
-                    if (response.data && response.data.field) {
-                        this.modal.showError(response.data.field, response.data.message);
+                    const errorMessage = response.data?.message || 'Gagal menyimpan data';
+                    if (response.data?.field) {
+                        this.modal.showError(response.data.field, errorMessage);
                     } else {
-                        irToast.error(response.data.message || 'Gagal menyimpan data');
+                        irToast.error(errorMessage);
                     }
                 }
             } catch (error) {
                 console.error('Save error:', error);
+                if (error.responseJSON) {
+                    console.error('Server error details:', error.responseJSON);
+                }
                 irToast.error('Terjadi kesalahan sistem');
             }
         }
 
-        // Callback ketika create success - akan di-override di ProvinceManager
         onSuccess(data) {
-            // Override di ProvinceManager
+            // Will be overridden in ProvinceManager
         }
     }
 
