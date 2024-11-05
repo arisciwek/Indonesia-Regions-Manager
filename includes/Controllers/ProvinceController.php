@@ -1,4 +1,19 @@
 <?php
+/**
+ * File: includes/Controllers/ProvinceController.php
+ * Version: 1.0.0
+ * Revisi-1
+ * 
+ * Changelog:
+ * - Fix nonce verification
+ * - Add detailed error response
+ * - Fix AJAX handling
+ * - Add debug logging
+ * 
+ * Notes:
+ * - File ini menggantikan versi sebelumnya sepenuhnya
+ */
+
 namespace IndonesiaRegions\Controllers;
 
 class ProvinceController {
@@ -420,41 +435,56 @@ class ProvinceController {
     /**
      * Handle AJAX request to create new province
      */
+
     public function ajax_create_province() {
-        check_ajax_referer('ir_nonce', 'nonce');
-        
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(array('message' => 'Unauthorized'), 403);
-        }
-
-        $name = isset($_POST['name']) ? sanitize_text_field($_POST['name']) : '';
-        
-        if (empty($name)) {
-            wp_send_json_error(array(
-                'field' => 'provinceName',
-                'message' => 'Nama provinsi tidak boleh kosong'
-            ));
-        }
-
         try {
+            // Verify nonce first
+            if (!check_ajax_referer('ir_nonce', 'nonce', false)) {
+                wp_send_json_error(array(
+                    'message' => 'Invalid security token'
+                ), 403);
+            }
+            
+            if (!current_user_can('manage_options')) {
+                wp_send_json_error(array(
+                    'message' => 'Unauthorized'
+                ), 403);
+            }
+
+            // Get and validate name
+            $name = isset($_POST['name']) ? sanitize_text_field($_POST['name']) : '';
+            
+            if (empty($name)) {
+                wp_send_json_error(array(
+                    'field' => 'provinceName',
+                    'message' => 'Nama provinsi tidak boleh kosong'
+                ), 400);
+            }
+
+            // Log incoming request
+            error_log('Creating province with name: ' . $name);
+
+            // Create province
             $result = $this->model->create($name);
             
             if (is_wp_error($result)) {
                 wp_send_json_error(array(
                     'field' => 'provinceName',
                     'message' => $result->get_error_message()
-                ));
+                ), 400);
             }
 
+            // Success response
             wp_send_json_success(array(
                 'id' => $result,
                 'message' => 'Provinsi berhasil ditambahkan'
             ));
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
+            error_log('Province creation error: ' . $e->getMessage());
             wp_send_json_error(array(
                 'message' => $e->getMessage()
-            ));
+            ), 500);
         }
     }
 
