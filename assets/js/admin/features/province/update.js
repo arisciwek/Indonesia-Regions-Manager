@@ -1,19 +1,15 @@
-// File: assets/js/admin/features/province/update.js
-// Version: 1.0.0
-// Revisi-1
-// 
-// Changelog:
-// - Fix form event handling
-// - Add validation for update only
-// - Prevent handling when id is empty
-// - Fix update specific logic
-// 
-// Dependencies:
-// - jQuery
-// - irFormModal
-// - irValidator
-// - irToast
-
+/**
+ * File: assets/js/admin/features/province/update.js
+ * Version: 1.0.0
+ * Revisi-3
+ * 
+ * Changelog:
+ * - Fix validasi yang masih terpanggil saat mode create
+ * - Penambahan pengecekan mode sebelum validasi
+ * - Perbaikan log message untuk debugging
+ * - Penambahan early return saat mode tidak sesuai
+ * - Restrukturisasi validasi flow
+ */
 
 (function($) {
     'use strict';
@@ -22,10 +18,10 @@
         constructor() {
             this.modal = new irFormModal('provinceModal', {
                 onSave: (formData) => this.handleSave(formData),
-                validator: (form) => this.validateForm(form)
+                validator: (form, mode) => this.validateForm(form, mode),
+                mode: 'update'
             });
 
-            this.validator = irValidator;
             this.currentId = null;
         }
 
@@ -37,6 +33,7 @@
 
             try {
                 this.currentId = id;
+                this.modal.setMode('update');
                 this.modal.setTitle('Edit Provinsi');
 
                 const response = await $.ajax({
@@ -64,40 +61,60 @@
             }
         }
 
-        async validateForm($form) {
-            // Only proceed if we have an ID
+        async validateForm($form, mode) {
+            // Early return jika bukan mode update
+            if (mode !== 'update') {
+                console.log('Skipping update validation - wrong mode:', mode);
+                return true; // Return true agar validasi bisa dilanjutkan ke handler lain
+            }
+
+            // Early return jika tidak ada ID
             if (!this.currentId) {
-                console.warn('Validation called without ID');
+                console.log('Skipping update validation - no ID');
                 return false;
             }
 
-            const name = $form.find('#provinceName').val().trim();
-            
-            // Basic validation
-            const result = this.validator.validateField('name', name);
-            if (!result.valid) {
-                this.modal.showError('provinceName', result.message);
-                return false;
-            }
-
-            // Check duplicate if name is valid
-            if (name.length >= 3) {
-                const dupeCheck = await this.validator.checkDuplicate(
-                    name, 
-                    'ir_check_province_name',
-                    { id: this.currentId }
-                );
-                if (!dupeCheck.valid) {
-                    this.modal.showError('provinceName', dupeCheck.message);
+            try {
+                console.log('Running update validation for ID:', this.currentId);
+                const name = $form.find('#provinceName').val().trim();
+                
+                // Basic validation
+                const result = irValidator.validateField('name', name);
+                if (!result.valid) {
+                    this.modal.showError('provinceName', result.message);
                     return false;
                 }
-            }
 
-            return true;
+                // Check duplicate untuk update
+                if (name.length >= 3) {
+                    try {
+                        const dupeCheck = await irValidator.checkDuplicate(
+                            name,
+                            'ir_check_province_name',
+                            { 
+                                mode: 'update',
+                                id: this.currentId 
+                            }
+                        );
+                        if (!dupeCheck.valid) {
+                            this.modal.showError('provinceName', dupeCheck.message);
+                            return false;
+                        }
+                    } catch (error) {
+                        console.error('Duplicate check error:', error);
+                        return false;
+                    }
+                }
+
+                return true;
+            } catch (error) {
+                console.error('Validation error:', error);
+                this.modal.showError('provinceName', 'Gagal melakukan validasi');
+                return false;
+            }
         }
 
         async handleSave(formData) {
-            // Only proceed if we have an ID
             if (!this.currentId) {
                 console.warn('Update called without ID');
                 return;
@@ -145,7 +162,6 @@
         }
     }
 
-    // Export ProvinceUpdate
     window.irProvinceUpdate = ProvinceUpdate;
 
 })(jQuery);

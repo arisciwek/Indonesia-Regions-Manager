@@ -1,19 +1,14 @@
 /**
  * File: assets/js/admin/components/modal/form.js
- * Version: 1.0.0
- * Revisi-1
+ * Version: 1.0.1
+ * Revisi-3
  * 
  * Changelog:
- * - Fix event handling untuk submit
- * - Prevent double submission
- * - Fix form data handling
- * - Add debug logs
- * 
- * Dependencies:
- * - jQuery
- * - irBaseModal
- * - irValidator
- * - irHelper
+ * - Mengembalikan method initializeFormEvents yang hilang
+ * - Fix typo pada event binding
+ * - Perbaikan handling mode pada event initialization
+ * - Memastikan proper event cleanup saat destroy
+ * - Perbaikan urutan method untuk readability
  */
 
 (function($) {
@@ -26,6 +21,7 @@
             this.options = {
                 onSave: () => {},
                 validator: null,
+                mode: 'create',
                 ...options
             };
 
@@ -33,44 +29,54 @@
             this.$submitButton = this.$modal.find('#btnSaveProvince');
             this.$cancelButton = this.$modal.find('#btnCancelProvince');
             
+            this.isSubmitting = false;
             this.initializeFormEvents();
         }
 
         initializeFormEvents() {
-            // Prevent default form submission
-            this.$form.on('submit', (e) => {
+            // Cleanup existing events first
+            this.cleanupEvents();
+
+            // Handle form submit
+            this.$form.on('submit.formModal', async (e) => {
                 e.preventDefault();
+                if (!this.isSubmitting) {
+                    await this.handleSubmit();
+                }
             });
 
             // Handle submit button click
-            this.$submitButton.on('click', async (e) => {
+            this.$submitButton.on('click.formModal', async (e) => {
                 e.preventDefault();
-                e.stopPropagation(); // Prevent event bubbling
-                await this.handleSubmit();
+                if (!this.isSubmitting) {
+                    await this.handleSubmit();
+                }
             });
 
             // Handle cancel button click
-            this.$cancelButton.on('click', (e) => {
+            this.$cancelButton.on('click.formModal', (e) => {
                 e.preventDefault();
                 this.hide();
             });
 
             // Override close button from parent class
-            this.$close.off('click').on('click', (e) => {
+            this.$close.off('click').on('click.formModal', (e) => {
                 e.preventDefault();
                 this.hide();
             });
 
             // Handle enter key
-            this.$form.on('keypress', async (e) => {
+            this.$form.on('keypress.formModal', async (e) => {
                 if (e.which === 13 && !e.shiftKey) {
                     e.preventDefault();
-                    await this.handleSubmit();
+                    if (!this.isSubmitting) {
+                        await this.handleSubmit();
+                    }
                 }
             });
 
-            // Clear validation errors on input
-            this.$form.find('input, select, textarea').on('input', (e) => {
+            // Clear validation errors when input changes
+            this.$form.find('input, select, textarea').on('input.formModal', (e) => {
                 const $field = $(e.target);
                 const $formGroup = $field.closest('.ir-form-group');
                 $formGroup.find('.ir-error-message').hide();
@@ -79,31 +85,35 @@
         }
 
         async handleSubmit() {
+            if (this.isSubmitting) return;
+            
             try {
-                console.log('Form submission started');
+                this.isSubmitting = true;
+                this.$submitButton.prop('disabled', true);
                 
-                // Clear errors first
                 this.clearErrors();
 
-                // Get form data
+                // Get the form data
                 const formData = new FormData(this.$form[0]);
-                console.log('Form data collected:', Object.fromEntries(formData));
 
-                // Validate if validator provided
+                // Run validator sesuai mode
                 if (this.options.validator) {
-                    const isValid = await this.options.validator(this.$form);
+                    const isValid = await this.options.validator(this.$form, this.options.mode);
                     if (!isValid) {
                         console.log('Form validation failed');
                         return;
                     }
                 }
 
-                // Call onSave callback
+                // If validation passes, proceed with save
                 await this.options.onSave(formData);
                 
             } catch (error) {
                 console.error('Form submission error:', error);
                 irToast.error('Gagal menyimpan data');
+            } finally {
+                this.isSubmitting = false;
+                this.$submitButton.prop('disabled', false);
             }
         }
 
@@ -112,7 +122,6 @@
         }
 
         setFormData(data) {
-            this.$form[0].reset(); // Clear form first
             Object.entries(data).forEach(([key, value]) => {
                 const $field = this.$form.find(`[name="${key}"]`);
                 if ($field.length) {
@@ -124,11 +133,29 @@
         resetForm() {
             this.$form[0].reset();
             this.clearErrors();
+            this.isSubmitting = false;
+            this.$submitButton.prop('disabled', false);
         }
 
         clearErrors() {
             this.$form.find('.ir-error-message').hide();
             this.$form.find('.error').removeClass('error');
+        }
+
+        cleanupEvents() {
+            this.$form.off('.formModal');
+            this.$submitButton.off('.formModal');
+            this.$cancelButton.off('.formModal');
+            this.$close.off('.formModal');
+            this.$form.find('input, select, textarea').off('.formModal');
+        }
+
+        onShow() {
+            this.resetForm();
+        }
+
+        onHide() {
+            this.resetForm();
         }
 
         showError(fieldId, message) {
@@ -142,16 +169,16 @@
             this.$modal.find('.ir-modal-header h2').text(title);
         }
 
-        onShow() {
-            this.resetForm();
+        setMode(mode) {
+            this.options.mode = mode;
         }
 
-        onHide() {
-            this.resetForm();
+        destroy() {
+            this.cleanupEvents();
+            super.destroy && super.destroy();
         }
     }
 
-    // Export FormModal
     window.irFormModal = FormModal;
 
 })(jQuery);
