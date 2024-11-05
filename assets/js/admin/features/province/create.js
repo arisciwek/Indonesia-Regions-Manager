@@ -1,5 +1,6 @@
 (function($) {
     'use strict';
+    //solusi-2: perbaikan create province dengan form handling yang lebih baik
 
     class ProvinceCreate {
         constructor() {
@@ -12,16 +13,21 @@
         }
 
         show() {
-            // Reset form dan set judul modal
             this.modal.setTitle('Tambah Provinsi');
             this.modal.resetForm();
             this.modal.show();
         }
 
         async validateForm($form) {
-            const name = $form.find('#provinceName').val();
+            const name = $form.find('#provinceName').val().trim();
             
             // Basic validation
+            if (!name) {
+                this.modal.showError('provinceName', 'Nama provinsi tidak boleh kosong');
+                return false;
+            }
+
+            // Validasi dengan validator
             const result = this.validator.validateField('name', name);
             if (!result.valid) {
                 this.modal.showError('provinceName', result.message);
@@ -29,7 +35,7 @@
             }
 
             // Check duplicate jika nama valid
-            if (name.trim().length >= 3) {
+            if (name.length >= 3) {
                 try {
                     const dupeCheck = await this.validator.checkDuplicate(
                         name, 
@@ -41,6 +47,7 @@
                     }
                 } catch (error) {
                     console.error('Validation error:', error);
+                    irToast.error('Terjadi kesalahan saat validasi');
                     return false;
                 }
             }
@@ -50,10 +57,6 @@
 
         async handleSave(formData) {
             try {
-                // Tampilkan loading state
-                this.modal.$submitButton.prop('disabled', true);
-                this.modal.$submitButton.text('Menyimpan...');
-
                 const response = await irAPI.province.create(formData);
                 
                 if (response.success) {
@@ -81,10 +84,6 @@
             } catch (error) {
                 console.error('Save error:', error);
                 irToast.error('Terjadi kesalahan sistem');
-            } finally {
-                // Reset loading state
-                this.modal.$submitButton.prop('disabled', false);
-                this.modal.$submitButton.text('Simpan');
             }
         }
 

@@ -1,5 +1,6 @@
 (function($) {
     'use strict';
+    //solusi-2: perbaikan handling modal dan form events
 
     class FormModal extends irBaseModal {
         constructor(modalId, options = {}) {
@@ -14,39 +15,60 @@
 
             // Initialize form elements after super
             this.$form = this.$modal.find('form');
-            this.$submitButton = this.$modal.find('#btnSave');
+            this.$submitButton = this.$modal.find('#btnSaveProvince');
+            this.$cancelButton = this.$modal.find('#btnCancelProvince');
             
             this.initializeFormEvents();
         }
 
         initializeFormEvents() {
             // Handle form submit
-            this.$form.on('submit', (e) => {
+            this.$form.on('submit', async (e) => {
                 e.preventDefault();
-                this.handleSubmit();
+                await this.handleSubmit();
             });
 
             // Handle submit button click
-            this.$submitButton.on('click', () => {
+            this.$submitButton.on('click', (e) => {
+                e.preventDefault();
                 this.$form.submit();
+            });
+
+            // Handle cancel button click
+            this.$cancelButton.on('click', (e) => {
+                e.preventDefault();
+                this.hide();
             });
 
             // Handle enter key
             this.$form.on('keypress', (e) => {
                 if (e.which === 13) {
                     e.preventDefault();
-                    this.handleSubmit();
+                    this.$form.submit();
                 }
             });
         }
 
         async handleSubmit() {
+            // Clear any existing errors first
+            this.clearErrors();
+
             if (this.options.validator) {
                 const isValid = await this.options.validator(this.$form);
                 if (!isValid) return;
             }
 
-            await this.options.onSave(this.getFormData());
+            // Disable submit button during save
+            this.$submitButton.prop('disabled', true)
+                            .text('Menyimpan...');
+
+            try {
+                await this.options.onSave(this.getFormData());
+            } finally {
+                // Re-enable submit button
+                this.$submitButton.prop('disabled', false)
+                                .text('Simpan');
+            }
         }
 
         getFormData() {
@@ -61,7 +83,19 @@
 
         resetForm() {
             this.$form[0].reset();
-            irHelper.form.clearErrors(this.$form);
+            this.clearErrors();
+        }
+
+        clearErrors() {
+            this.$form.find('.ir-error-message').hide().text('');
+            this.$form.find('.error').removeClass('error');
+        }
+
+        showError(field, message) {
+            const $field = this.$form.find(`#${field}`);
+            const $error = $field.siblings('.ir-error-message');
+            $field.addClass('error');
+            $error.text(message).show();
         }
 
         onShow() {
@@ -70,10 +104,6 @@
 
         onHide() {
             this.resetForm();
-        }
-
-        showError(field, message) {
-            irHelper.form.showError(this.$form, field, message);
         }
 
         setTitle(title) {
