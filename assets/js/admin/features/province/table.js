@@ -1,26 +1,56 @@
+/**
+ * File: assets/js/admin/features/province/table-solusi-3.js
+ * Version: 1.0.1
+ * Deskripsi: Perbaikan DataTable reinitialize warning pada ProvinceTable
+ * 
+ * Changelog:
+ * - Penambahan singleton pattern untuk mencegah multiple instance
+ * - Perbaikan lifecycle management (init, destroy)
+ * - Implementasi proper event cleanup
+ * - Perbaikan handling DataTable instance
+ */
+
 (function($) {
     'use strict';
 
+    // Private variables untuk singleton pattern
+    let instance = null;
+    let dataTableInstance = null;
+
     class ProvinceTable extends irBaseTable {
         constructor() {
-            // Define configuration before calling super
+            // Implementasi singleton
+            if (instance) {
+                console.warn('ProvinceTable already initialized, returning existing instance');
+                return instance;
+            }
+
+            // Destroy existing DataTable jika ada
+            if ($.fn.DataTable.isDataTable('#provincesTable')) {
+                $('#provincesTable').DataTable().destroy();
+                console.info('Destroyed existing DataTable instance');
+            }
+
+            // Clear event handlers dari instance sebelumnya
+            $('#provincesTable').off();
+
+            // Define table configuration
             const tableConfig = {
+                destroy: true, // Enable destroy option
                 ajax: {
                     url: irSettings.ajaxurl,
                     type: 'POST',
-                    data: function(d) {
-                        return {
-                            ...d,
-                            action: 'ir_get_provinces',
-                            nonce: irSettings.nonce
-                        };
-                    }
+                    data: (d) => ({
+                        ...d,
+                        action: 'ir_get_provinces',
+                        nonce: irSettings.nonce
+                    })
                 },
                 columns: [
                     { data: 'id' },
                     { 
                         data: 'name',
-                        render: function(data, type, row) {
+                        render: (data, type, row) => {
                             if (type === 'display') {
                                 return `<a href="#${row.id}" class="province-link">${data}</a>`;
                             }
@@ -33,15 +63,13 @@
                     },
                     { 
                         data: 'created_at',
-                        render: function(data) {
-                            return irHelper.formatDate(data);
-                        }
+                        render: (data) => irHelper.formatDate(data)
                     },
                     {
                         data: null,
                         orderable: false,
                         searchable: false,
-                        render: function(data) {
+                        render: (data) => {
                             const actions = new irTableActions({
                                 onEdit: () => {},
                                 onDelete: () => {}
@@ -50,25 +78,44 @@
                         }
                     }
                 ],
-                order: [[1, 'asc']]
+                order: [[1, 'asc']],
+                processing: true,
+                serverSide: true,
+                responsive: true,
+                language: irSettings.dataTable.language
             };
 
-            // Call super with configuration
+            // Initialize parent
             super('provincesTable', tableConfig);
 
-            // Initialize table actions after super
+            // Set instance dan referensi DataTable
+            instance = this;
+            dataTableInstance = this.datatable;
+
+            // Initialize table actions
             this.actions = new irTableActions({
                 onEdit: (id) => this.handleEdit(id),
                 onDelete: (id) => this.handleDelete(id)
             });
 
-            // Initialize events after everything is set up
             this.initializeEvents();
+
+            return instance;
         }
 
+        /**
+         * Initialize event handlers dengan proper cleanup
+         */
         initializeEvents() {
-            // Handle province link clicks
-            this.$table.on('click', '.province-link', (e) => {
+            const $table = this.$table;
+
+            // Cleanup existing events first
+            $table.off('click', '.province-link');
+            $table.off('click', '.edit-row');
+            $table.off('click', '.delete-row');
+
+            // Re-attach event handlers
+            $table.on('click', '.province-link', (e) => {
                 e.preventDefault();
                 const href = $(e.currentTarget).attr('href');
                 if (href) {
@@ -76,38 +123,86 @@
                 }
             });
 
-            // Attach action events only if actions is properly initialized
+            // Attach action events if actions initialized
             if (this.actions && typeof this.actions.attachEvents === 'function') {
-                this.actions.attachEvents(this.$table);
+                this.actions.attachEvents($table);
+            }
+
+            // Add error handler untuk ajax requests
+            this.datatable.on('error.dt', (e, settings, techNote, message) => {
+                console.error('DataTable error:', message);
+                irToast.error('Gagal memuat data provinsi');
+            });
+        }
+
+        /**
+         * Reload table data dengan preserving state
+         */
+        reload() {
+            if (this.datatable) {
+                this.datatable.ajax.reload(null, false);
             }
         }
 
-        // Handler methods that will be overridden
+        /**
+         * Proper cleanup saat destroy
+         */
+        destroy() {
+            try {
+                // Remove event handlers
+                if (this.$table) {
+                    this.$table.off();
+                }
+
+                // Destroy DataTable instance
+                if (this.datatable) {
+                    this.datatable.destroy();
+                    this.datatable = null;
+                }
+
+                // Cleanup actions
+                if (this.actions) {
+                    this.actions = null;
+                }
+
+                // Reset instances
+                instance = null;
+                dataTableInstance = null;
+
+                console.info('ProvinceTable cleanup successful');
+            } catch (error) {
+                console.error('Error during ProvinceTable cleanup:', error);
+            }
+        }
+
+        /**
+         * Get current DataTable instance
+         */
+        static getInstance() {
+            return instance;
+        }
+
+        /**
+         * Handler for edit action
+         */
         handleEdit(id) {
             if (typeof this.onEdit === 'function') {
                 this.onEdit(id);
             }
         }
 
+        /**
+         * Handler for delete action
+         */
         handleDelete(id) {
             if (typeof this.onDelete === 'function') {
                 this.onDelete(id);
             }
         }
 
-        // Callback methods to be overridden by province manager
+        // Callback methods yang akan di-override ProvinceManager
         onEdit() {}
         onDelete() {}
-
-        // Public method to set callbacks
-        setCallbacks(callbacks = {}) {
-            if (typeof callbacks.onEdit === 'function') {
-                this.onEdit = callbacks.onEdit;
-            }
-            if (typeof callbacks.onDelete === 'function') {
-                this.onDelete = callbacks.onDelete;
-            }
-        }
     }
 
     // Export ProvinceTable
