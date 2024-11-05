@@ -1,3 +1,20 @@
+// File: assets/js/admin/features/province/update.js
+// Version: 1.0.0
+// Revisi-1
+// 
+// Changelog:
+// - Fix form event handling
+// - Add validation for update only
+// - Prevent handling when id is empty
+// - Fix update specific logic
+// 
+// Dependencies:
+// - jQuery
+// - irFormModal
+// - irValidator
+// - irToast
+
+
 (function($) {
     'use strict';
 
@@ -13,38 +30,48 @@
         }
 
         async show(id) {
-            this.currentId = id;
-            this.modal.setTitle('Edit Provinsi');
+            if (!id) {
+                console.warn('Update called without ID');
+                return;
+            }
 
             try {
-                const data = await this.loadProvinceData(id);
-                if (data) {
-                    this.modal.setFormData(data);
+                this.currentId = id;
+                this.modal.setTitle('Edit Provinsi');
+
+                const response = await $.ajax({
+                    url: irSettings.ajaxurl,
+                    type: 'POST',
+                    data: {
+                        action: 'ir_get_province',
+                        id: id,
+                        nonce: irSettings.nonce
+                    }
+                });
+
+                if (response.success) {
+                    this.modal.setFormData({
+                        id: id,
+                        name: response.data.name
+                    });
                     this.modal.show();
+                } else {
+                    irToast.error(response.data.message || 'Gagal memuat data provinsi');
                 }
             } catch (error) {
+                console.error('Load error:', error);
                 irToast.error('Gagal memuat data provinsi');
-                console.error('Load province error:', error);
             }
-        }
-
-        async loadProvinceData(id) {
-            // Check cache first
-            let data = irCache.get('provinces', id);
-            
-            if (!data) {
-                const response = await irAPI.province.get(id);
-                if (response.success) {
-                    data = response.data;
-                    irCache.set('provinces', id, data);
-                }
-            }
-
-            return data;
         }
 
         async validateForm($form) {
-            const name = $form.find('#provinceName').val();
+            // Only proceed if we have an ID
+            if (!this.currentId) {
+                console.warn('Validation called without ID');
+                return false;
+            }
+
+            const name = $form.find('#provinceName').val().trim();
             
             // Basic validation
             const result = this.validator.validateField('name', name);
@@ -53,11 +80,13 @@
                 return false;
             }
 
-            // Check duplicate
-            if (name.trim().length >= 3) {
-                const dupeCheck = await this.validator.checkDuplicate(name, 'ir_check_province_name', {
-                    id: this.currentId
-                });
+            // Check duplicate if name is valid
+            if (name.length >= 3) {
+                const dupeCheck = await this.validator.checkDuplicate(
+                    name, 
+                    'ir_check_province_name',
+                    { id: this.currentId }
+                );
                 if (!dupeCheck.valid) {
                     this.modal.showError('provinceName', dupeCheck.message);
                     return false;
@@ -68,33 +97,51 @@
         }
 
         async handleSave(formData) {
+            // Only proceed if we have an ID
+            if (!this.currentId) {
+                console.warn('Update called without ID');
+                return;
+            }
+
             try {
                 formData.append('id', this.currentId);
-                const response = await irAPI.province.update(formData);
+                formData.append('action', 'ir_update_province');
+                formData.append('nonce', irSettings.nonce);
+
+                console.log('Sending update data:', Object.fromEntries(formData));
+
+                const response = await $.ajax({
+                    url: irSettings.ajaxurl,
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false
+                });
                 
                 if (response.success) {
                     irToast.success('Provinsi berhasil diupdate');
                     this.modal.hide();
                     
-                    // Update cache and table
-                    irCache.remove('provinces', this.currentId);
-                    this.onSuccess(this.currentId, formData);
+                    irCache.remove('provinces');
+                    if (typeof this.onSuccess === 'function') {
+                        this.onSuccess(this.currentId);
+                    }
                 } else {
-                    if (response.data.field) {
+                    if (response.data?.field) {
                         this.modal.showError(response.data.field, response.data.message);
                     } else {
-                        irToast.error(response.data.message || 'Gagal mengupdate data');
+                        irToast.error(response.data?.message || 'Gagal menyimpan data');
                     }
                 }
             } catch (error) {
                 console.error('Update error:', error);
-                irToast.error('Terjadi kesalahan sistem');
+                const message = error.responseJSON?.data?.message || 'Terjadi kesalahan sistem';
+                irToast.error(message);
             }
         }
 
-        // Callback ketika update success
-        onSuccess(id, formData) {
-            // Override di ProvinceManager
+        onSuccess(id) {
+            // Will be overridden in ProvinceManager
         }
     }
 

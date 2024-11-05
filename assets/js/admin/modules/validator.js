@@ -1,3 +1,10 @@
+/**
+ * File: assets/js/admin/modules/validator.js
+ * Version: 1.0.0
+ * Revisi-4
+ * Deskripsi: Form validator untuk provinsi dengan logic yang disederhanakan
+ */
+
 (function($) {
     'use strict';
 
@@ -7,7 +14,7 @@
                 name: {
                     minLength: 3,
                     maxLength: 100,
-                    pattern: /^[a-zA-Z\s]+$/,
+                    pattern: /^[a-zA-Z\s]+$/,  // Hanya huruf dan spasi
                     messages: {
                         required: 'Nama tidak boleh kosong',
                         minLength: 'Nama minimal 3 karakter',

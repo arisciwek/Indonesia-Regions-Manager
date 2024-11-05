@@ -1,0 +1,7 @@
+/tests
+/tests/*
+/bin
+/bin/*
+
+/phpunit.xml
+/wp-test-tmp.sh

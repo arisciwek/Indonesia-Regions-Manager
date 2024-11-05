@@ -1,10 +1,26 @@
+/**
+ * File: assets/js/admin/components/modal/form.js
+ * Version: 1.0.0
+ * Revisi-1
+ * 
+ * Changelog:
+ * - Fix event handling untuk submit
+ * - Prevent double submission
+ * - Fix form data handling
+ * - Add debug logs
+ * 
+ * Dependencies:
+ * - jQuery
+ * - irBaseModal
+ * - irValidator
+ * - irHelper
+ */
+
 (function($) {
     'use strict';
-    //solusi-2: perbaikan handling modal dan form events
 
     class FormModal extends irBaseModal {
         constructor(modalId, options = {}) {
-            // Call super first before accessing this
             super(modalId);
             
             this.options = {
@@ -13,7 +29,6 @@
                 ...options
             };
 
-            // Initialize form elements after super
             this.$form = this.$modal.find('form');
             this.$submitButton = this.$modal.find('#btnSaveProvince');
             this.$cancelButton = this.$modal.find('#btnCancelProvince');
@@ -22,16 +37,16 @@
         }
 
         initializeFormEvents() {
-            // Handle form submit
-            this.$form.on('submit', async (e) => {
+            // Prevent default form submission
+            this.$form.on('submit', (e) => {
                 e.preventDefault();
-                await this.handleSubmit();
             });
 
             // Handle submit button click
-            this.$submitButton.on('click', (e) => {
+            this.$submitButton.on('click', async (e) => {
                 e.preventDefault();
-                this.$form.submit();
+                e.stopPropagation(); // Prevent event bubbling
+                await this.handleSubmit();
             });
 
             // Handle cancel button click
@@ -40,34 +55,55 @@
                 this.hide();
             });
 
+            // Override close button from parent class
+            this.$close.off('click').on('click', (e) => {
+                e.preventDefault();
+                this.hide();
+            });
+
             // Handle enter key
-            this.$form.on('keypress', (e) => {
-                if (e.which === 13) {
+            this.$form.on('keypress', async (e) => {
+                if (e.which === 13 && !e.shiftKey) {
                     e.preventDefault();
-                    this.$form.submit();
+                    await this.handleSubmit();
                 }
+            });
+
+            // Clear validation errors on input
+            this.$form.find('input, select, textarea').on('input', (e) => {
+                const $field = $(e.target);
+                const $formGroup = $field.closest('.ir-form-group');
+                $formGroup.find('.ir-error-message').hide();
+                $field.removeClass('error');
             });
         }
 
         async handleSubmit() {
-            // Clear any existing errors first
-            this.clearErrors();
-
-            if (this.options.validator) {
-                const isValid = await this.options.validator(this.$form);
-                if (!isValid) return;
-            }
-
-            // Disable submit button during save
-            this.$submitButton.prop('disabled', true)
-                            .text('Menyimpan...');
-
             try {
-                await this.options.onSave(this.getFormData());
-            } finally {
-                // Re-enable submit button
-                this.$submitButton.prop('disabled', false)
-                                .text('Simpan');
+                console.log('Form submission started');
+                
+                // Clear errors first
+                this.clearErrors();
+
+                // Get form data
+                const formData = new FormData(this.$form[0]);
+                console.log('Form data collected:', Object.fromEntries(formData));
+
+                // Validate if validator provided
+                if (this.options.validator) {
+                    const isValid = await this.options.validator(this.$form);
+                    if (!isValid) {
+                        console.log('Form validation failed');
+                        return;
+                    }
+                }
+
+                // Call onSave callback
+                await this.options.onSave(formData);
+                
+            } catch (error) {
+                console.error('Form submission error:', error);
+                irToast.error('Gagal menyimpan data');
             }
         }
 
@@ -76,8 +112,12 @@
         }
 
         setFormData(data) {
+            this.$form[0].reset(); // Clear form first
             Object.entries(data).forEach(([key, value]) => {
-                this.$form.find(`[name="${key}"]`).val(value);
+                const $field = this.$form.find(`[name="${key}"]`);
+                if ($field.length) {
+                    $field.val(value);
+                }
             });
         }
 
@@ -87,15 +127,19 @@
         }
 
         clearErrors() {
-            this.$form.find('.ir-error-message').hide().text('');
+            this.$form.find('.ir-error-message').hide();
             this.$form.find('.error').removeClass('error');
         }
 
-        showError(field, message) {
-            const $field = this.$form.find(`#${field}`);
+        showError(fieldId, message) {
+            const $field = this.$form.find(`#${fieldId}`);
             const $error = $field.siblings('.ir-error-message');
             $field.addClass('error');
             $error.text(message).show();
+        }
+
+        setTitle(title) {
+            this.$modal.find('.ir-modal-header h2').text(title);
         }
 
         onShow() {
@@ -104,10 +148,6 @@
 
         onHide() {
             this.resetForm();
-        }
-
-        setTitle(title) {
-            this.$modal.find('.ir-modal-header h2').text(title);
         }
     }
 
