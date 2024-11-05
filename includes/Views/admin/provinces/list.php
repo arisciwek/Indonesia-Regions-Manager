@@ -4,14 +4,12 @@ if (!defined('ABSPATH')) exit;
 <div class="wrap ir-provinces">
     <h1>Daftar Provinsi</h1>
     
-    <!-- Tombol Tambah -->
     <div class="ir-toolbar">
         <button type="button" class="button button-primary" id="btnAddProvince">
             Tambah Provinsi
         </button>
     </div>
     
-    <!-- Modal Form Provinsi -->
     <div id="provinceModal" class="ir-modal">
         <div class="ir-modal-content">
             <div class="ir-modal-header">
@@ -19,13 +17,20 @@ if (!defined('ABSPATH')) exit;
                 <button type="button" class="ir-modal-close">&times;</button>
             </div>
             <div class="ir-modal-body">
-                <form id="provinceForm" onsubmit="return false;">  <!-- Tambahkan onsubmit -->
+                <form id="provinceForm" method="post">
+                    <input type="hidden" name="id" value="">
                     <div class="ir-form-group">
                         <label for="provinceName">Nama Provinsi</label>
-                        <input type="text" id="provinceName" name="name" class="regular-text" required>
+                        <input type="text" 
+                               id="provinceName" 
+                               name="name" 
+                               class="regular-text" 
+                               required
+                               minlength="3"
+                               maxlength="100">
                         <div class="ir-error-message"></div>
                     </div>
-                    <input type="hidden" id="provinceId" name="id" value="">
+                    <input type="hidden" id="provinceId">
                     <?php wp_nonce_field('ir_province_nonce', 'ir_nonce'); ?>
                 </form>
             </div>
@@ -36,7 +41,6 @@ if (!defined('ABSPATH')) exit;
         </div>
     </div>
 
-    <!-- Tabel Provinsi -->
     <div class="ir-table-container">
         <table id="provincesTable" class="display" style="width:100%">
             <thead>
