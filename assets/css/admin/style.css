@@ -291,3 +291,104 @@ table.dataTable tbody td {
         align-items: flex-start;
     }
 }
+
+
+/* Layout */
+.ir-provinces-container {
+    display: flex;
+    gap: 20px;
+    margin: 20px;
+    width: calc(100% - 40px);
+}
+
+.ir-provinces,
+.ir-provinces-detail {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Panel Styles - Updated */
+.ir-panel {
+    background: #fff;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.ir-panel-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid #ddd;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8f9fa;
+}
+
+.ir-panel-header h2 {
+    margin: 0;
+    font-size: 1.4em;
+    color: #1d2327;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ir-panel-content {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+/* Panel Actions */
+.ir-panel-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* Table Container - Updated */
+.ir-table-container {
+    /* Remove duplicate styles that are now handled by panel */
+    padding: 0;
+    background: none;
+    box-shadow: none;
+    border-radius: 0;
+}
+
+/* DataTables Custom Styles - Updated */
+.ir-panel table.dataTable thead th {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #e5e5e5;
+    padding: 10px;
+}
+
+.ir-panel table.dataTable tbody td {
+    padding: 8px 10px;
+    vertical-align: middle;
+}
+
+.ir-panel .dataTables_wrapper .dataTables_filter {
+    margin-bottom: 15px;
+}
+
+.ir-panel .dataTables_wrapper .dataTables_length {
+    margin-bottom: 15px;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 782px) {
+    .ir-panel-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .ir-panel-actions {
+        width: 100%;
+    }
+    
+    .ir-panel-actions button {
+        flex: 1;
+    }
+}
