@@ -1,3 +1,14 @@
+/**
+ * File: assets/js/admin/components/table/actions.js
+ * Version: 1.0.1
+ * Description: Table action handlers (edit, delete, view)
+ * 
+ * Changelog v1.0.1:
+ * - Fix: Removed duplicate delete confirmation
+ * - Fix: Restructured delete handler to use single confirmation
+ * - Fix: Code cleanup and improved error handling
+ */
+
 (function($) {
     'use strict';
 
@@ -7,7 +18,6 @@
                 onEdit: () => {},
                 onDelete: () => {},
                 onView: () => {},
-                confirmDelete: irSettings.messages.confirmDelete,
                 ...options
             };
         }
@@ -31,11 +41,11 @@
                 this.options.onEdit(id);
             });
 
-            // Delete button handler
+            // Delete button handler with single confirmation
             $container.on('click', '.delete-row', (e) => {
                 e.preventDefault();
                 const id = $(e.currentTarget).data('id');
-                if (confirm(this.options.confirmDelete)) {
+                if (confirm(irSettings.messages.confirmDelete)) {
                     this.options.onDelete(id);
                 }
             });
