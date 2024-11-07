@@ -19,43 +19,58 @@ if (!defined('ABSPATH')) exit;
                 <div class="spinner"></div>
             </div>
 
-            <!-- Detail Content -->
+            <!-- Detail Content with Tabs -->
             <div id="provinceDetail" class="ir-province-detail">
-                <div class="ir-detail-content">
-                    <div class="ir-detail-stats">
-                        <div class="ir-stat-item">
-                            <label>Total Kabupaten/Kota</label>
-                            <span id="totalCities">-</span>
-                        </div>
-                        <div class="ir-stat-item">
-                            <label>Dibuat Pada</label>
-                            <span id="createdAt">-</span>
-                        </div>
-                        <div class="ir-stat-item">
-                            <label>Terakhir Diupdate</label>
-                            <span id="updatedAt">-</span>
+                <!-- Tab Navigation -->
+                <div class="ir-tabs">
+                    <button type="button" class="ir-tab-btn active" data-tab="info">
+                        Informasi Provinsi
+                    </button>
+                    <button type="button" class="ir-tab-btn" data-tab="cities">
+                        Kabupaten/Kota
+                    </button>
+                </div>
+
+                <!-- Tab Contents -->
+                <div class="ir-tab-contents">
+                    <!-- Info Tab -->
+                    <div id="tabInfo" class="ir-tab-content active" data-tab="info">
+                        <div class="ir-detail-stats">
+                            <div class="ir-stat-item">
+                                <label>Total Kabupaten/Kota</label>
+                                <span id="totalCities">-</span>
+                            </div>
+                            <div class="ir-stat-item">
+                                <label>Dibuat Pada</label>
+                                <span id="createdAt">-</span>
+                            </div>
+                            <div class="ir-stat-item">
+                                <label>Terakhir Diupdate</label>
+                                <span id="updatedAt">-</span>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Tabel Kabupaten/Kota -->
-                    <div class="ir-cities-container">
-                        <div class="ir-cities-header">
-                            <h3>Daftar Kabupaten/Kota</h3>
+                    <!-- Cities Tab -->
+                    <div id="tabCities" class="ir-tab-content" data-tab="cities">
+                        <div class="ir-toolbar">
                             <button type="button" class="button button-primary" id="btnAddCity">
                                 Tambah Kab/Kota
                             </button>
                         </div>
-                        <table id="citiesTable" class="display" style="width:100%">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Nama</th>
-                                    <th>Tipe</th>
-                                    <th>Tanggal Dibuat</th>
-                                    <th>Aksi</th>
-                                </tr>
-                            </thead>
-                        </table>
+                        <div class="ir-cities-table">
+                            <table id="citiesTable" class="display" style="width:100%">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Nama</th>
+                                        <th>Tipe</th>
+                                        <th>Tanggal Dibuat</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
