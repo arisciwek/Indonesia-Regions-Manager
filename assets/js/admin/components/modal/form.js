@@ -1,14 +1,12 @@
 /**
  * File: assets/js/admin/components/modal/form.js
- * Version: 1.0.1
- * Revisi-3
+ * Version: 1.0.2
  * 
  * Changelog:
- * - Mengembalikan method initializeFormEvents yang hilang
- * - Fix typo pada event binding
- * - Perbaikan handling mode pada event initialization
- * - Memastikan proper event cleanup saat destroy
- * - Perbaikan urutan method untuk readability
+ * - Fix: Form submit tidak berfungsi saat pertama kali buka
+ * - Fix: Auto-focus field input pertama saat modal dibuka
+ * - Fix: Handle form data binding yang lebih baik
+ * - Fix: Validasi form yang lebih konsisten
  */
 
 (function($) {
@@ -28,6 +26,7 @@
             this.$form = this.$modal.find('form');
             this.$submitButton = this.$modal.find('#btnSaveProvince');
             this.$cancelButton = this.$modal.find('#btnCancelProvince');
+            this.$firstInput = this.$form.find('input[type="text"]').first();
             
             this.isSubmitting = false;
             this.initializeFormEvents();
@@ -96,8 +95,8 @@
                 // Get the form data
                 const formData = new FormData(this.$form[0]);
 
-                // Run validator sesuai mode
-                if (this.options.validator) {
+                // Run validator jika ada
+                if (typeof this.options.validator === 'function') {
                     const isValid = await this.options.validator(this.$form, this.options.mode);
                     if (!isValid) {
                         console.log('Form validation failed');
@@ -122,6 +121,10 @@
         }
 
         setFormData(data) {
+            // Reset form first
+            this.resetForm();
+
+            // Map data to form fields
             Object.entries(data).forEach(([key, value]) => {
                 const $field = this.$form.find(`[name="${key}"]`);
                 if ($field.length) {
@@ -152,6 +155,12 @@
 
         onShow() {
             this.resetForm();
+            // Focus pada input pertama setelah modal muncul
+            setTimeout(() => {
+                if (this.$firstInput.length) {
+                    this.$firstInput.focus();
+                }
+            }, 100);
         }
 
         onHide() {
