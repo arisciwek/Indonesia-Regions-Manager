@@ -1,5 +1,5 @@
 /**
- * File: assets/js/admin/features/province/index-solusi-3.js
+ * File: assets/js/admin/features/province/index.js
  * Version: 1.0.1
  * Deskripsi: Province Manager untuk koordinasi komponen provinsi
  * 

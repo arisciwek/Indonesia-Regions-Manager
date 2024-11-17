@@ -1,0 +1,68 @@
+/**
+ * File: assets/css/admin/components/detail-tabs.css
+ * Version: 1.0.0
+ * Description: Styles for detail panel tabs
+ */
+
+.ir-detail-tabs {
+    display: flex;
+    gap: 1px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #ddd;
+    background: #f8f9fa;
+}
+
+.ir-tab {
+    padding: 12px 24px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 14px;
+    color: #666;
+    position: relative;
+}
+
+.ir-tab:hover {
+    color: #2271b1;
+}
+
+.ir-tab.active {
+    color: #2271b1;
+    font-weight: 600;
+}
+
+.ir-tab.active:after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: #2271b1;
+}
+
+.ir-tab-content {
+    display: none;
+    padding: 20px 0;
+}
+
+.ir-tab-content.active {
+    display: block;
+}
+
+/* Loading state for tabs */
+.ir-tab-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 200px;
+}
+
+/* Error state for tabs */
+.ir-tab-error {
+    padding: 20px;
+    color: #d63638;
+    text-align: center;
+    background: #fcf0f1;
+    border-radius: 4px;
+}

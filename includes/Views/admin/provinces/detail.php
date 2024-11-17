@@ -1,4 +1,10 @@
 <?php
+/**
+ * File: includes/Views/admin/provinces/detail.php
+ * Version: 1.1.0
+ * Description: Province detail panel template with tab interface
+ */
+
 if (!defined('ABSPATH')) exit;
 ?>
 <div class="wrap ir-provinces-detail">
@@ -13,28 +19,26 @@ if (!defined('ABSPATH')) exit;
                 <button type="button" class="button button-link-delete" id="btnDeleteProvince">Hapus</button>
             </div>
         </div>
+        
         <div class="ir-panel-content">
             <!-- Loading Placeholder -->
             <div id="provinceDetailLoading" class="ir-loading">
                 <div class="spinner"></div>
             </div>
 
-            <!-- Detail Content with Tabs -->
+            <!-- Detail Content -->
             <div id="provinceDetail" class="ir-province-detail">
                 <!-- Tab Navigation -->
-                <div class="ir-tabs">
-                    <button type="button" class="ir-tab-btn active" data-tab="info">
-                        Informasi Provinsi
-                    </button>
-                    <button type="button" class="ir-tab-btn" data-tab="cities">
-                        Kabupaten/Kota
-                    </button>
+                <div class="ir-detail-tabs">
+                    <button class="ir-tab active" data-tab="info">Informasi Dasar</button>
+                    <button class="ir-tab" data-tab="cities">Kabupaten/Kota</button>
+                    <button class="ir-tab" data-tab="stats">Statistik</button>
                 </div>
 
                 <!-- Tab Contents -->
-                <div class="ir-tab-contents">
+                <div class="ir-detail-content">
                     <!-- Info Tab -->
-                    <div id="tabInfo" class="ir-tab-content active" data-tab="info">
+                    <div id="infoContent" class="ir-tab-content active">
                         <div class="ir-detail-stats">
                             <div class="ir-stat-item">
                                 <label>Total Kabupaten/Kota</label>
@@ -52,25 +56,29 @@ if (!defined('ABSPATH')) exit;
                     </div>
 
                     <!-- Cities Tab -->
-                    <div id="tabCities" class="ir-tab-content" data-tab="cities">
-                        <div class="ir-toolbar">
+                    <div id="citiesContent" class="ir-tab-content">
+                        <div class="ir-cities-header">
+                            <h3>Daftar Kabupaten/Kota</h3>
                             <button type="button" class="button button-primary" id="btnAddCity">
                                 Tambah Kab/Kota
                             </button>
                         </div>
-                        <div class="ir-cities-table">
-                            <table id="citiesTable" class="display" style="width:100%">
-                                <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Nama</th>
-                                        <th>Tipe</th>
-                                        <th>Tanggal Dibuat</th>
-                                        <th>Aksi</th>
-                                    </tr>
-                                </thead>
-                            </table>
-                        </div>
+                        <table id="citiesTable" class="display" style="width:100%">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nama</th>
+                                    <th>Tipe</th>
+                                    <th>Tanggal Dibuat</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                        </table>
+                    </div>
+
+                    <!-- Stats Tab -->
+                    <div id="statsContent" class="ir-tab-content">
+                        <!-- Statistics content will be loaded here -->
                     </div>
                 </div>
             </div>

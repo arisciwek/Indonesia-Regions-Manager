@@ -1,3 +1,13 @@
+/**
+ * File: assets/js/admin/config/constants.js
+ * Version: 1.1.0
+ * 
+ * Changelog:
+ * - Add City endpoints with new naming convention
+ * - Add City DOM selectors
+ * - Add City cache keys
+ */
+
 (function() {
     'use strict';
 
@@ -43,12 +53,12 @@
                 CHECK_NAME: 'ir_check_province_name'
             },
             CITY: {
-                LIST: 'ir_get_cities',
-                GET: 'ir_get_city',
-                CREATE: 'ir_create_city',
-                UPDATE: 'ir_update_city',
-                DELETE: 'ir_delete_city',
-                CHECK_NAME: 'ir_check_city_name'
+                LIST: 'ir_city_get_all',
+                GET: 'ir_city_get',
+                CREATE: 'ir_city_create',
+                UPDATE: 'ir_city_update',
+                DELETE: 'ir_city_delete',
+                CHECK_NAME: 'ir_city_check_name'
             }
         },
 
@@ -64,9 +74,64 @@
             },
             CITY: {
                 CONTAINER: '.ir-cities-container',
+                LIST: '.ir-cities-list',
+                DETAIL: '.ir-cities-detail',
                 TABLE: '#citiesTable',
                 MODAL: '#cityModal',
-                ADD_BUTTON: '#btnAddCity'
+                ADD_BUTTON: '#btnAddCity',
+                FORM: {
+                    MAIN: '#cityForm',
+                    NAME: '#cityName',
+                    TYPE: '#cityType'
+                },
+                BUTTONS: {
+                    SAVE: '#btnSaveCity',
+                    CANCEL: '#btnCancelCity'
+                },
+                TABS: {
+                    CONTAINER: '.ir-city-tabs',
+                    CONTENT: '.ir-city-tab-content'
+                }
+            }
+        },
+
+        // Form Validation Rules
+        VALIDATION: {
+            CITY: {
+                NAME: {
+                    MIN_LENGTH: 3,
+                    MAX_LENGTH: 100,
+                    PATTERN: /^[a-zA-Z\s]+$/
+                },
+                TYPES: ['kabupaten', 'kota']
+            }
+        },
+
+        // Messages
+        MESSAGES: {
+            CITY: {
+                CONFIRM_DELETE: 'Apakah Anda yakin ingin menghapus kabupaten/kota ini?',
+                NAME_REQUIRED: 'Nama kabupaten/kota tidak boleh kosong',
+                TYPE_REQUIRED: 'Tipe harus dipilih',
+                NAME_EXISTS: 'Nama kabupaten/kota sudah ada di provinsi ini',
+                CREATE_SUCCESS: 'Kabupaten/Kota berhasil ditambahkan',
+                UPDATE_SUCCESS: 'Kabupaten/Kota berhasil diupdate',
+                DELETE_SUCCESS: 'Kabupaten/Kota berhasil dihapus',
+                ERROR_LOADING: 'Gagal memuat data kabupaten/kota',
+                ERROR_SAVING: 'Gagal menyimpan data'
+            }
+        },
+
+        // Table Configurations
+        TABLE: {
+            CITY: {
+                DEFAULT_ORDER: [[1, 'asc']],
+                COLUMNS: [
+                    { data: 'id' },
+                    { data: 'name' },
+                    { data: 'type' },
+                    { data: 'created_at' }
+                ]
             }
         }
     };

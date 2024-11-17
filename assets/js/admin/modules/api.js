@@ -1,3 +1,13 @@
+/**
+ * File: assets/js/admin/modules/api.js
+ * Version: 1.1.0
+ * Description: API module untuk handle AJAX requests
+ * 
+ * Changelog:
+ * - v1.1.0: Menambahkan city API endpoints
+ * - v1.0.0: Initial release dengan province endpoints
+ */
+
 (function($) {
     'use strict';
 
@@ -51,15 +61,47 @@
             }
         },
 
-        // City specific API calls (untuk pengembangan nanti)
+        // City specific API calls 
         city: {
             getAll: function(provinceId, dtData) {
-                return api.request('ir_get_cities', {
+                return api.request(irConstants.ENDPOINTS.CITY.LIST, {
                     province_id: provinceId,
                     ...dtData
                 });
             },
-            // ... methods lainnya untuk city
+
+            get: function(id) {
+                return api.request(irConstants.ENDPOINTS.CITY.GET, {
+                    id: id
+                });
+            },
+
+            create: function(formData) {
+                return api.request(irConstants.ENDPOINTS.CITY.CREATE, formData);
+            },
+
+            update: function(formData) {
+                return api.request(irConstants.ENDPOINTS.CITY.UPDATE, formData);
+            },
+
+            delete: function(id) {
+                return api.request(irConstants.ENDPOINTS.CITY.DELETE, {
+                    id: id
+                });
+            },
+
+            checkName: function(name, provinceId, id = 0) {
+                return api.request(irConstants.ENDPOINTS.CITY.CHECK_NAME, {
+                    name: name,
+                    province_id: provinceId,
+                    id: id
+                });
+            },
+
+            // Method khusus untuk mendapatkan data tipe kota/kabupaten
+            getTypes: function() {
+                return irConstants.VALIDATION.CITY.TYPES;
+            }
         }
     };
 

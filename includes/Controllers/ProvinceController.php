@@ -565,6 +565,67 @@ class ProvinceController {
         }
     }
 
+/**
+ * Handle AJAX request untuk get cities
+ */
+public function ajax_get_cities() {
+    check_ajax_referer('ir_nonce', 'nonce');
+    
+    if (!current_user_can('manage_options')) {
+        wp_send_json_error(array('message' => 'Unauthorized'), 403);
+    }
+
+    $province_id = isset($_POST['province_id']) ? intval($_POST['province_id']) : 0;
+    if (!$province_id) {
+        wp_send_json_error(array('message' => 'ID provinsi tidak valid'));
+    }
+
+    $draw = isset($_POST['draw']) ? intval($_POST['draw']) : 1;
+    $start = isset($_POST['start']) ? intval($_POST['start']) : 0;
+    $length = isset($_POST['length']) ? intval($_POST['length']) : 10;
+    $search = isset($_POST['search']['value']) ? sanitize_text_field($_POST['search']['value']) : '';
+    
+    $order_column = isset($_POST['order'][0]['column']) ? intval($_POST['order'][0]['column']) : 1;
+    $order_dir = isset($_POST['order'][0]['dir']) ? sanitize_text_field($_POST['order'][0]['dir']) : 'ASC';
+
+    // Map DataTables column index to database column name
+    $columns = array(
+        0 => 'id',
+        1 => 'name',
+        2 => 'type',
+        3 => 'created_at'
+    );
+
+    $order_by = isset($columns[$order_column]) ? $columns[$order_column] : 'name';
+
+    try {
+        $city_model = new \IndonesiaRegions\Models\City();
+        
+        $cities = $city_model->get_all(
+            $province_id, 
+            $search, 
+            $order_by, 
+            $order_dir, 
+            $length, 
+            $start
+        );
+        
+        $total = $city_model->get_total($province_id, $search);
+
+        wp_send_json(array(
+            'draw' => $draw,
+            'recordsTotal' => $total,
+            'recordsFiltered' => $total,
+            'data' => $cities
+        ));
+
+    } catch (\Exception $e) {
+        wp_send_json_error(array(
+            'message' => $e->getMessage()
+        ));
+    }
+}
+
     /**
      * Cache buster for development
      */

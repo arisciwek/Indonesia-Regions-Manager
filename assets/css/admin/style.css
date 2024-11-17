@@ -533,3 +533,7 @@ table.dataTable tbody td {
         border-bottom: 1px solid #ddd;
     }
 }
+
+#provincesTable_length select{
+    width:60px;
+}
