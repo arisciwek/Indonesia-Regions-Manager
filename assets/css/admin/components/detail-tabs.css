@@ -1,34 +1,45 @@
 /**
  * File: assets/css/admin/components/detail-tabs.css
- * Version: 1.0.0
- * Description: Styles for detail panel tabs
+ * Version: 1.1.0
+ * Description: Enhanced styles for detail panel tabs
+ * Last Updated: 2024-11-17 21:50:00
  */
 
+/* Tab Navigation Enhancement */
 .ir-detail-tabs {
     display: flex;
     gap: 1px;
     margin-bottom: 20px;
     border-bottom: 1px solid #ddd;
     background: #f8f9fa;
+    padding: 0 15px;
+    position: relative;
 }
 
 .ir-tab {
-    padding: 12px 24px;
+    padding: 15px 24px;
     border: none;
     background: transparent;
     cursor: pointer;
     font-size: 14px;
-    color: #666;
+    font-weight: 500;
+    color: #50575e;
     position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
 }
 
 .ir-tab:hover {
     color: #2271b1;
+    background-color: rgba(34, 113, 177, 0.04);
 }
 
 .ir-tab.active {
     color: #2271b1;
     font-weight: 600;
+    position: relative;
 }
 
 .ir-tab.active:after {
@@ -37,32 +48,257 @@
     bottom: -1px;
     left: 0;
     right: 0;
-    height: 3px;
+    height: 2px;
     background: #2271b1;
+    border-radius: 2px 2px 0 0;
 }
 
+.ir-tab .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    transition: transform 0.2s ease;
+}
+
+.ir-tab:hover .dashicons {
+    transform: translateY(-1px);
+}
+
+/* Tab Content Styling */
 .ir-tab-content {
     display: none;
     padding: 20px 0;
+    animation: fadeIn 0.3s ease;
 }
 
 .ir-tab-content.active {
     display: block;
 }
 
-/* Loading state for tabs */
+/* Stats Cards Enhancement */
+.ir-detail-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.ir-stat-card {
+    background: #fff;
+    border: 1px solid #e2e4e7;
+    border-radius: 8px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ir-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    border-color: #2271b1;
+}
+
+.stat-icon {
+    background: #f0f6fc;
+    border-radius: 10px;
+    width: 52px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.ir-stat-card:hover .stat-icon {
+    background: #2271b1;
+}
+
+.ir-stat-card:hover .stat-icon .dashicons {
+    color: #fff;
+    transform: scale(1.1);
+}
+
+.stat-icon .dashicons {
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+    color: #2271b1;
+    transition: all 0.2s ease;
+}
+
+.stat-content {
+    flex: 1;
+}
+
+.stat-content h3 {
+    margin: 0 0 5px 0;
+    font-size: 14px;
+    color: #50575e;
+    font-weight: 500;
+}
+
+.stat-value {
+    font-size: 22px;
+    font-weight: 600;
+    color: #1d2327;
+    display: block;
+    line-height: 1.3;
+}
+
+/* Cities Section Enhancement */
+.ir-cities-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding: 0 20px;
+}
+
+.ir-section-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ir-section-title .dashicons {
+    color: #2271b1;
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+}
+
+.ir-section-title h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 500;
+    color: #1d2327;
+}
+
+/* Button Enhancements */
+.ir-btn-add {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    transition: all 0.2s ease;
+}
+
+.ir-btn-add .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+
+.ir-btn-add:hover {
+    transform: translateY(-1px);
+}
+
+/* Loading States */
 .ir-tab-loading {
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 200px;
+    flex-direction: column;
+    gap: 15px;
 }
 
-/* Error state for tabs */
+.ir-tab-loading .spinner {
+    float: none;
+    visibility: visible;
+    margin: 0;
+}
+
+/* Error States */
 .ir-tab-error {
-    padding: 20px;
+    padding: 24px;
     color: #d63638;
     text-align: center;
     background: #fcf0f1;
-    border-radius: 4px;
+    border-radius: 6px;
+    margin: 20px;
+    border: 1px solid rgba(214, 54, 56, 0.2);
+}
+
+/* Stats Placeholder Enhancement */
+.ir-stats-placeholder {
+    text-align: center;
+    padding: 60px 20px;
+    color: #50575e;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 2px dashed #e2e4e7;
+    margin: 20px;
+}
+
+.ir-stats-placeholder .dashicons {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    margin-bottom: 15px;
+    color: #c3c4c7;
+}
+
+.ir-stats-placeholder p {
+    margin: 0;
+    font-size: 14px;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive Design */
+@media screen and (max-width: 782px) {
+    .ir-detail-stats {
+        grid-template-columns: 1fr;
+        padding: 15px;
+    }
+
+    .ir-tab {
+        padding: 12px 15px;
+    }
+
+    .ir-tab .tab-text {
+        display: none;
+    }
+
+    .ir-cities-header {
+        flex-direction: column;
+        gap: 15px;
+        align-items: flex-start;
+    }
+
+    .ir-btn-add {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .stat-icon {
+        width: 44px;
+        height: 44px;
+    }
+
+    .stat-value {
+        font-size: 18px;
+    }
+}
+
+/* High DPI Screen Optimizations */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .ir-stat-card {
+        border-width: 0.5px;
+    }
 }
