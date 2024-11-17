@@ -11,8 +11,6 @@
 
     class DetailPanel {
         constructor(options = {}) {
-            console.log('[DetailPanel] Initializing with options:', options);
-
             this.options = {
                 mainContentSelector: '.ir-provinces',
                 detailContentSelector: '.ir-provinces-detail',
@@ -43,23 +41,14 @@
 
             // Initialize events
             this.initializeEvents();
-
-            console.log('[DetailPanel] Initialization complete');
         }
 
         initializeTabs() {
-            console.log('[DetailPanel] Initializing tabs...');
             
             // Refresh DOM references
             this.$tabButtons = this.$detailContent.find(this.options.tabButtonSelector);
             this.$tabContents = this.$detailContent.find(this.options.tabContentSelector);
             
-            // Log tab elements found
-            console.log('[DetailPanel] Found elements:', {
-                buttons: this.$tabButtons.length,
-                contents: this.$tabContents.length
-            });
-
             if (this.$tabButtons.length === 0) {
                 console.warn('[DetailPanel] No tab buttons found, will retry after content load');
                 return false;
@@ -70,13 +59,6 @@
                 const $btn = $(element);
                 const tabId = $btn.data('tab');
                 const $content = this.$tabContents.filter(`#${tabId}Content`);
-                
-                console.log('[DetailPanel] Tab mapping:', {
-                    index: index,
-                    tabId: tabId,
-                    hasContent: $content.length > 0,
-                    isActive: $btn.hasClass(this.options.activeClass)
-                });
             });
 
             // Set active tab
@@ -90,24 +72,17 @@
             }
 
             this.tabsInitialized = true;
-            console.log('[DetailPanel] Tabs initialized successfully:', {
-                activeTab: this.activeTab,
-                totalTabs: this.$tabButtons.length
-            });
 
             return true;
         }
 
         initializeEvents() {
-            console.log('[DetailPanel] Setting up event handlers...');
-
             // Clean up existing events
             $(window).off('hashchange.detailPanel');
             this.$detailContent.off('click.detailPanel');
 
             // Reinitialize events
             $(window).on('hashchange.detailPanel', () => {
-                console.log('[DetailPanel] Hash changed');
                 this.handleHashChange();
             });
 
@@ -115,46 +90,27 @@
                 e.preventDefault();
                 const $clickedTab = $(e.currentTarget);
                 const tabId = $clickedTab.data('tab');
-
-                console.log('[DetailPanel] Tab clicked:', {
-                    tabId: tabId,
-                    isLoading: this.isLoading
-                });
-
                 if (tabId && !this.isLoading) {
                     this.switchTab(tabId);
                 }
             });
-
-            console.log('[DetailPanel] Event handlers configured');
         }
 
         async switchTab(tabId) {
-            console.log('[DetailPanel] Attempting to switch to tab:', tabId);
-
             // Validasi dasar
             if (!tabId) {
-                console.error('[DetailPanel] Invalid tab ID');
                 return;
             }
 
             // Cek apakah tabs sudah diinisialisasi
             if (!this.tabsInitialized) {
-                console.log('[DetailPanel] Tabs not initialized, attempting to initialize');
                 if (!this.initializeTabs()) {
-                    console.error('[DetailPanel] Cannot switch tab, initialization failed');
                     return;
                 }
             }
 
             const $targetButton = this.$tabButtons.filter(`[data-tab="${tabId}"]`);
             const $targetContent = this.$tabContents.filter(`#${tabId}Content`);
-
-            console.log('[DetailPanel] Tab elements found:', {
-                tabId: tabId,
-                buttonFound: $targetButton.length > 0,
-                contentFound: $targetContent.length > 0
-            });
 
             if (!$targetButton.length || !$targetContent.length) {
                 console.error('[DetailPanel] Tab not found:', {
@@ -167,7 +123,6 @@
 
             // Prevent switching if same tab
             if (this.activeTab === tabId) {
-                console.log('[DetailPanel] Tab already active');
                 return;
             }
 
@@ -192,10 +147,6 @@
             if (this.currentId) {
                 try {
                     localStorage.setItem(`ir_active_tab_${this.currentId}`, tabId);
-                    console.log('[DetailPanel] Saved active tab:', {
-                        provinceId: this.currentId,
-                        tabId: tabId
-                    });
                 } catch (error) {
                     console.warn('[DetailPanel] Failed to save tab state:', error);
                 }
@@ -204,16 +155,11 @@
 
         loadSavedTab() {
             if (!this.currentId || !this.tabsInitialized) {
-                console.log('[DetailPanel] Cannot load saved tab:', {
-                    hasCurrentId: !!this.currentId,
-                    tabsInitialized: this.tabsInitialized
-                });
                 return;
             }
 
             try {
                 const savedTab = localStorage.getItem(`ir_active_tab_${this.currentId}`);
-                console.log('[DetailPanel] Attempting to load saved tab:', savedTab);
 
                 if (savedTab && this.$tabButtons.filter(`[data-tab="${savedTab}"]`).length) {
                     this.switchTab(savedTab);
@@ -222,7 +168,6 @@
                     this.switchTab(firstTabId);
                 }
             } catch (error) {
-                console.warn('[DetailPanel] Error loading saved tab:', error);
                 const firstTabId = this.$tabButtons.first().data('tab');
                 this.switchTab(firstTabId);
             }
@@ -230,8 +175,6 @@
 
         async handleHashChange() {
             const id = irHelper.getHashId();
-            console.log('[DetailPanel] Hash changed, new ID:', id);
-
             if (id) {
                 await this.load(id);
             } else {
@@ -239,11 +182,8 @@
             }
         }
 
-        async load(id) {
-            console.log('[DetailPanel] Loading content for ID:', id);
-            
+        async load(id) {            
             if (this.isLoading) {
-                console.log('[DetailPanel] Already loading, please wait');
                 return;
             }
 
@@ -265,7 +205,6 @@
                     console.error('[DetailPanel] Failed to initialize tabs after load');
                 }
             } catch (error) {
-                console.error('[DetailPanel] Load error:', error);
                 irToast.error('Gagal memuat detail');
             } finally {
                 this.hideLoading();
@@ -295,9 +234,7 @@
             this.$content.show();
         }
 
-        destroy() {
-            console.log('[DetailPanel] Destroying instance');
-            
+        destroy() {            
             // Cleanup events
             $(window).off('hashchange.detailPanel');
             this.$detailContent.off('click.detailPanel');
@@ -312,8 +249,6 @@
             // Clear DOM references
             this.$tabButtons = null;
             this.$tabContents = null;
-            
-            console.log('[DetailPanel] Cleanup complete');
         }
     }
 

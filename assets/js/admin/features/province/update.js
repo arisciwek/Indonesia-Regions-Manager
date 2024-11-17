@@ -1,12 +1,13 @@
 /**
- * File: assets/js/admin/features/province/update.js 
- * Version: 1.0.6
- * Revisi: Fix nilai field tidak terisi
+ * File: assets/js/admin/features/province/update.js
+ * Version: 1.0.7
+ * Description: Province update handler
  * 
- * Changelog:
- * - Fix: Perbaikan metode pengisian nilai field
- * - Fix: Penambahan delay untuk memastikan modal sudah terbuka
- * - Fix: Verifikasi field existence sebelum set value
+ * Changelog v1.0.7 (2024-11-17):
+ * - Fix: Modal form conflict with create operation
+ * - Fix: Added event namespace
+ * - Fix: Form submission handling
+ * - Fix: Current ID validation
  */
 
 (function($) {
@@ -14,15 +15,24 @@
 
     class ProvinceUpdate {
         constructor() {
-            console.log('ProvinceUpdate: Initializing...');
-            
             this.modal = new irFormModal('provinceModal', {
                 onSave: (formData) => this.handleSave(formData),
+                validator: (form) => this.validateForm(form),
                 mode: 'update'
             });
 
             this.currentId = null;
-            this.currentData = null;
+            this.initializeEvents();
+        }
+
+        initializeEvents() {
+            this.modal.$form.off('submit.updateHandler').on('submit.updateHandler', async (e) => {
+                e.preventDefault();
+                if (!this.modal.isSubmitting && this.modal.options.mode === 'update') {
+                    const formData = new FormData(e.target);
+                    await this.handleSave(formData);
+                }
+            });
         }
 
         async show(id) {

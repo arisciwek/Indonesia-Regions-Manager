@@ -99,7 +99,6 @@
                 if (typeof this.options.validator === 'function') {
                     const isValid = await this.options.validator(this.$form, this.options.mode);
                     if (!isValid) {
-                        console.log('Form validation failed');
                         return;
                     }
                 }
@@ -108,7 +107,6 @@
                 await this.options.onSave(formData);
                 
             } catch (error) {
-                console.error('Form submission error:', error);
                 irToast.error('Gagal menyimpan data');
             } finally {
                 this.isSubmitting = false;
