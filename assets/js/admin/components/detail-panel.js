@@ -1,7 +1,7 @@
 /**
  * File: assets/js/admin/components/detail-panel.js
  * Version: 1.0.5
- * Last Updated: 2024-11-20 00:01:40
+ * Last Updated: 2024-11-20 00:02:20
  * 
  * Changes: 
  * - Add proper loading UI with spinner
@@ -29,6 +29,20 @@
                 onHide: () => {},
                 onTabChange: () => {},
                 ...options
+
+                // Update DOM elements references
+                this.$mainContent = $(this.options.mainContentSelector);
+                this.$detailContent = $(this.options.detailContentSelector);
+                this.$loading = this.$detailContent.find(this.options.loadingSelector);
+                this.$content = this.$detailContent.find(this.options.contentSelector);
+                
+                // Initialize panel state
+                this.hideLoading();
+                this.$content.show();
+
+                this.$loading = this.$detailContent.find('#provinceDetailLoading');
+                this.$content = this.$detailContent.find('#provinceDetail');
+                this.hideLoading();
             };
 
             // Cache DOM elements
@@ -152,28 +166,64 @@
             }
         }
 
+        async load(id) {
+            if (this.isLoading) return;
+
+            this.isLoading = true;
+            this.showLoading();
+            
+            try {
+                this.currentId = id;
+                await this.options.onLoad(id);
+                
+                this.tabsInitialized = false;
+                const initialized = this.initializeTabs();
+                
+                if (initialized) {
+                    this.hideLoading();
+                    this.show();
+                    this.loadSavedTab();
+                } else {
+                    throw new Error('Failed to initialize tabs');
+                }
+            } catch (error) {
+                this.hideLoading();
+                irToast.error('Gagal memuat detail');
+            } finally {
+                this.isLoading = false;
+            }
+        }
+
         show() {
+            this.hideLoading();
             this.$detailContent.addClass('active').show();
             this.$content.show();
-            this.$loading.hide(); // Ensure loading is hidden when showing content
             this.options.onShow();
         }
 
         hide() {
+            this.hideLoading();
             this.$detailContent.removeClass('active').hide();
             this.$content.hide();
-            this.$loading.hide(); // Ensure loading is hidden when hiding panel
             this.options.onHide();
         }
 
         showLoading() {
-            this.$loading.show();
-            this.$content.hide();
+            if (this.$content) {
+                this.$content.hide();
+            }
+            if (this.$loading) {
+                this.$loading.show();
+            }
         }
 
         hideLoading() {
-            this.$loading.hide();
-            this.$content.show();
+            if (this.$loading) {
+                this.$loading.hide();
+            }
+            if (this.$content) {
+                this.$content.show();
+            }
         }
 
         // Add CSS for spinner
