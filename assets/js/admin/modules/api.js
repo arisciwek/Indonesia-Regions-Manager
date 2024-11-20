@@ -1,10 +1,10 @@
 /**
  * File: assets/js/admin/modules/api.js
- * Version: 1.1.0
+ * Version: 1.0.1
  * Description: API module untuk handle AJAX requests
  * 
  * Changelog:
- * - v1.1.0: Menambahkan city API endpoints
+ * - v1.0.1: Menambahkan city API endpoints
  * - v1.0.0: Initial release dengan province endpoints
  */
 
