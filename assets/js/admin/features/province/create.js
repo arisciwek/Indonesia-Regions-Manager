@@ -56,9 +56,11 @@
             this.modal.setTitle('Tambah Provinsi');
             this.modal.show();
         }
-
-        async validateForm($form) {            
+        
+        async validateForm($form, mode) {
             try {
+                if (mode !== 'create') return true; // Skip jika bukan mode create
+                
                 const name = $form.find('#provinceName').val();
 
                 // Basic validation
@@ -69,27 +71,25 @@
                     return false;
                 }
 
-                // Check duplicate if name is valid
-                if (name.length >= 3) {                    
-                    try {
-                        const response = await $.ajax({
-                            url: irSettings.ajaxurl,
-                            type: 'POST',
-                            data: {
-                                action: 'ir_check_province_name',
-                                name: name,
-                                mode: 'create',
-                                nonce: irSettings.nonce
-                            }
-                        });
-
-                        if (!response.success) {
-                            this.modal.showError('provinceName', response.data.message);
-                            return false;
+                // Check duplicate
+                try {
+                    const response = await $.ajax({
+                        url: irSettings.ajaxurl,
+                        type: 'POST',
+                        data: {
+                            action: 'ir_check_province_name',
+                            name: name,
+                            mode: 'create',
+                            nonce: irSettings.nonce
                         }
-                    } catch (error) {
+                    });
+
+                    if (!response.success) {
+                        this.modal.showError('provinceName', response.data.message);
                         return false;
                     }
+                } catch (error) {
+                    return false;
                 }
                 return true;
             } catch (error) {

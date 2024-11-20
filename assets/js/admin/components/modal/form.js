@@ -1,12 +1,13 @@
 /**
  * File: assets/js/admin/components/modal/form.js
- * Version: 1.0.2
+ * Version: 1.0.5
+ * Last Updated: 2024-11-20 07:30:00
  * 
- * Changelog:
- * - Fix: Form submit tidak berfungsi saat pertama kali buka
- * - Fix: Auto-focus field input pertama saat modal dibuka
- * - Fix: Handle form data binding yang lebih baik
- * - Fix: Validasi form yang lebih konsisten
+ * Changelog v1.0.5:
+ * - Fix: Form validation timing dan error message
+ * - Fix: Cancel button functionality
+ * - Fix: Form state management
+ * - Fix: Event handling cleanup
  */
 
 (function($) {
@@ -23,165 +24,202 @@
                 ...options
             };
 
-            this.$form = this.$modal.find('form');
-            this.$submitButton = this.$modal.find('#btnSaveProvince');
-            this.$cancelButton = this.$modal.find('#btnCancelProvince');
-            this.$firstInput = this.$form.find('input[type="text"]').first();
-            
-            this.isSubmitting = false;
+            this.state = {
+                isSubmitting: false,
+                currentMode: this.options.mode,
+                hasChanges: false,
+                validationErrors: {}
+            };
+
+            this.initializeFormElements();
             this.initializeFormEvents();
         }
 
-        initializeFormEvents() {
-            // Cleanup existing events first
-            this.cleanupEvents();
+        initializeFormElements() {
+            this.$form = this.$modal.find('form');
+            this.$submitButton = this.$modal.find('[type="submit"]');
+            this.$cancelButton = this.$modal.find('[data-action="cancel"], .ir-modal-close, #btnCancelProvince');
+            this.$inputs = this.$form.find('input, select, textarea');
+            this.$firstInput = this.$inputs.first();
 
-            // Handle form submit
+            if (!this.$form.length) {
+                console.error('FormModal: Form element not found');
+                return;
+            }
+        }
+
+        initializeFormEvents() {
+            // Cleanup existing events
+            this.$form.off('.formModal');
+            this.$inputs.off('.formModal');
+            this.$cancelButton.off('.formModal');
+            this.$submitButton.off('.formModal');
+
+            // Form submit
             this.$form.on('submit.formModal', async (e) => {
                 e.preventDefault();
-                if (!this.isSubmitting) {
+                if (!this.state.isSubmitting) {
                     await this.handleSubmit();
                 }
             });
 
-            // Handle submit button click
-            this.$submitButton.on('click.formModal', async (e) => {
-                e.preventDefault();
-                if (!this.isSubmitting) {
-                    await this.handleSubmit();
-                }
+            // Input change
+            this.$inputs.on('input.formModal change.formModal', (e) => {
+                this.handleInputChange(e);
             });
 
-            // Handle cancel button click
+            // Cancel button
             this.$cancelButton.on('click.formModal', (e) => {
                 e.preventDefault();
-                this.hide();
+                this.handleCancel();
             });
 
-            // Override close button from parent class
-            this.$close.off('click').on('click.formModal', (e) => {
+            // Submit button
+            this.$submitButton.on('click.formModal', (e) => {
                 e.preventDefault();
-                this.hide();
-            });
-
-            // Handle enter key
-            this.$form.on('keypress.formModal', async (e) => {
-                if (e.which === 13 && !e.shiftKey) {
-                    e.preventDefault();
-                    if (!this.isSubmitting) {
-                        await this.handleSubmit();
-                    }
+                if (!this.state.isSubmitting) {
+                    this.$form.submit();
                 }
-            });
-
-            // Clear validation errors when input changes
-            this.$form.find('input, select, textarea').on('input.formModal', (e) => {
-                const $field = $(e.target);
-                const $formGroup = $field.closest('.ir-form-group');
-                $formGroup.find('.ir-error-message').hide();
-                $field.removeClass('error');
             });
         }
 
         async handleSubmit() {
-            if (this.isSubmitting) return;
+            if (this.state.isSubmitting) return;
             
             try {
-                this.isSubmitting = true;
-                this.$submitButton.prop('disabled', true);
+                this.startSubmitting();
                 
+                // Get form data before clearing errors
+                const formData = new FormData(this.$form[0]);
+                
+                // Clear previous errors
                 this.clearErrors();
 
-                // Get the form data
-                const formData = new FormData(this.$form[0]);
-
-                // Run validator jika ada
-                if (typeof this.options.validator === 'function') {
-                    const isValid = await this.options.validator(this.$form, this.options.mode);
-                    if (!isValid) {
-                        return;
-                    }
+                // Validate form
+                const isValid = await this.validateForm();
+                if (!isValid) {
+                    return;
                 }
 
-                // If validation passes, proceed with save
+                // Process save
                 await this.options.onSave(formData);
                 
             } catch (error) {
-                irToast.error('Gagal menyimpan data');
+                this.handleError(error);
             } finally {
-                this.isSubmitting = false;
-                this.$submitButton.prop('disabled', false);
+                this.endSubmitting();
             }
         }
 
-        getFormData() {
-            return new FormData(this.$form[0]);
+        startSubmitting() {
+            this.state.isSubmitting = true;
+            this.$submitButton.prop('disabled', true)
+                .html('<span class="spinner is-active"></span> Menyimpan...');
+        }
+
+        endSubmitting() {
+            this.state.isSubmitting = false;
+            this.$submitButton.prop('disabled', false)
+                .text('Simpan');
+        }
+
+        async validateForm() {
+            if (typeof this.options.validator !== 'function') {
+                return true;
+            }
+
+            try {
+                const $form = this.$form;
+                const mode = this.state.currentMode;
+
+                // Set timeout untuk memastikan nilai form sudah terupdate
+                await new Promise(resolve => setTimeout(resolve, 0));
+
+                return await this.options.validator($form, mode);
+            } catch (error) {
+                console.error('FormModal: Validation error:', error);
+                return false;
+            }
+        }
+
+        handleInputChange(e) {
+            const $field = $(e.target);
+            const $formGroup = $field.closest('.ir-form-group');
+            
+            // Clear validation error
+            $formGroup.find('.ir-error-message').hide();
+            $field.removeClass('error');
+
+            // Track changes
+            this.state.hasChanges = true;
+        }
+
+        handleCancel() {
+            if (this.state.hasChanges && !confirm('Perubahan belum disimpan. Yakin ingin menutup?')) {
+                return;
+            }
+            this.hide();
+        }
+
+        show() {
+            super.show();
+            this.focusFirstInput();
+        }
+
+        focusFirstInput() {
+            if (this.$firstInput.length) {
+                setTimeout(() => this.$firstInput.focus(), 100);
+            }
         }
 
         setFormData(data) {
-            // Reset form first
             this.resetForm();
 
-            // Map data to form fields
             Object.entries(data).forEach(([key, value]) => {
                 const $field = this.$form.find(`[name="${key}"]`);
                 if ($field.length) {
                     $field.val(value);
+                    $field.trigger('change');
                 }
             });
+
+            this.state.hasChanges = false;
         }
 
         resetForm() {
             this.$form[0].reset();
             this.clearErrors();
-            this.isSubmitting = false;
+            this.state.isSubmitting = false;
+            this.state.hasChanges = false;
             this.$submitButton.prop('disabled', false);
         }
 
         clearErrors() {
             this.$form.find('.ir-error-message').hide();
             this.$form.find('.error').removeClass('error');
-        }
-
-        cleanupEvents() {
-            this.$form.off('.formModal');
-            this.$submitButton.off('.formModal');
-            this.$cancelButton.off('.formModal');
-            this.$close.off('.formModal');
-            this.$form.find('input, select, textarea').off('.formModal');
-        }
-
-        onShow() {
-            this.resetForm();
-            // Focus pada input pertama setelah modal muncul
-            setTimeout(() => {
-                if (this.$firstInput.length) {
-                    this.$firstInput.focus();
-                }
-            }, 100);
-        }
-
-        onHide() {
-            this.resetForm();
+            this.state.validationErrors = {};
         }
 
         showError(fieldId, message) {
             const $field = this.$form.find(`#${fieldId}`);
             const $error = $field.siblings('.ir-error-message');
+            
             $field.addClass('error');
             $error.text(message).show();
+            
+            this.state.validationErrors[fieldId] = message;
         }
 
-        setTitle(title) {
-            this.$modal.find('.ir-modal-header h2').text(title);
-        }
-
-        setMode(mode) {
-            this.options.mode = mode;
+        hide() {
+            this.resetForm();
+            super.hide();
         }
 
         destroy() {
-            this.cleanupEvents();
+            this.$form.off('.formModal');
+            this.$inputs.off('.formModal');
+            this.$cancelButton.off('.formModal');
+            this.$submitButton.off('.formModal');
             super.destroy && super.destroy();
         }
     }
