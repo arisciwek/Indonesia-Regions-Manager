@@ -13,7 +13,7 @@
             this.rules = {
                 name: {
                     minLength: 3,
-                    maxLength: 100,
+                    maxLength: 101,
                     pattern: /^[a-zA-Z\s]+$/,  // Hanya huruf dan spasi
                     messages: {
                         required: 'Nama tidak boleh kosong',
