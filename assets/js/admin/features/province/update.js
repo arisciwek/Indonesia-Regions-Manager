@@ -1,14 +1,15 @@
 /**
  * File: assets/js/admin/features/province/update.js
- * Version: 1.2.5
- * Last Updated: 2024-11-20 05:30:00
+ * Version: 1.3.1
+ * Last Updated: 2024-11-20 11:00:00
  * 
- * Changelog v1.2.5:
- * - Fix: Form validation and error message display
- * - Fix: Modal state management
- * - Fix: Form submission handling
- * - Add: Proper form data validation before save
- * - Add: Clear error messages on new submission
+ * Changelog v1.3.1:
+ * - Fix: Save handling process
+ * - Fix: Form submission flow
+ * - Add: Better error handling
+ * - Add: State cleanup after save
+ * - Fix: Modal hiding after successful save
+ * - Add: Detailed logging for debugging
  */
 
 (function($) {
@@ -18,76 +19,117 @@
         constructor() {
             this.state = {
                 currentId: null,
-                isProcessing: false
+                isProcessing: false,
+                originalData: null
             };
 
             this.modal = new irFormModal('provinceModal', {
                 onSave: (formData) => this.handleSave(formData),
                 validator: (form) => this.validateForm(form),
-                mode: 'update'
+                mode: 'update',
+                validationRules: {
+                    required: true,
+                    minLength: 3,
+                    maxLength: 100,
+                    pattern: /^[a-zA-Z\s]+$/,
+                    messages: {
+                        required: 'Nama provinsi tidak boleh kosong',
+                        minLength: 'Nama provinsi minimal 3 karakter',
+                        maxLength: 'Nama provinsi maksimal 100 karakter',
+                        pattern: 'Nama provinsi hanya boleh mengandung huruf dan spasi'
+                    }
+                }
             });
 
             this.initializeEvents();
         }
 
         initializeEvents() {
+            // Form submission handler
             this.modal.$form.off('submit').on('submit', async (e) => {
                 e.preventDefault();
-                console.log('Form submit event triggered');
-                console.log('Current state:', this.state);
-                console.log('Form data:', {
-                    name: this.modal.$form.find('#provinceName').val(),
-                    nameLength: this.modal.$form.find('#provinceName').val()?.length,
-                    trimmedLength: this.modal.$form.find('#provinceName').val()?.trim().length
-                });
+                console.log('ProvinceUpdate: Form submitted');
                 
-                if (!this.state.isProcessing && this.state.currentId) {
-                    const formData = new FormData(e.target);
-                    console.log('FormData entries:', Object.fromEntries(formData));
-                    await this.handleSave(formData);
+                if (this.state.isProcessing) {
+                    console.log('ProvinceUpdate: Already processing, skipping submission');
+                    return;
                 }
+
+                const formValid = await this.validateForm(this.modal.$form);
+                if (!formValid) {
+                    console.log('ProvinceUpdate: Form validation failed');
+                    return;
+                }
+
+                // Create new FormData and explicitly get values
+                const formData = new FormData();
+                const name = this.modal.$form.find('#provinceName').val()?.trim();
+                
+                // Log the actual values being sent
+                console.log('ProvinceUpdate: Submitting with values:', {
+                    id: this.state.currentId,
+                    name: name
+                });
+
+                // Manually append values to ensure proper data
+                formData.append('name', name);
+                formData.append('id', this.state.currentId);
+                
+                await this.handleSave(formData);
             });
 
-            this.modal.$modal.off('hidden.bs.modal').on('hidden.bs.modal', () => {
-                console.log('Modal hidden - resetting state');
-                this.state.currentId = null;
-                this.state.isProcessing = false;
-                this.modal.clearErrors();
+            // Modal close handler
+            this.modal.$modal.on('hide.baseModal', () => {
+                this.resetState();
             });
+
+            console.log('ProvinceUpdate: Events initialized');
+        }
+
+        resetState() {
+            console.log('ProvinceUpdate: Resetting state');
+            this.state = {
+                currentId: null,
+                isProcessing: false,
+                originalData: null
+            };
+            this.modal.clearErrors();
         }
 
         async show(id) {
-            if (!id) return;
+            if (!id || !this.validateId(id)) {
+                console.error('ProvinceUpdate: Invalid ID:', id);
+                return;
+            }
 
             try {
-                const response = await irAPI.province.get(id);
-                if (!response.success) throw new Error('Failed to load data');
-
-                this.state.currentId = id;
+                console.log('ProvinceUpdate: Loading data for ID:', id);
+                const data = await this.loadProvinceData(id);
                 
-                this.modal.resetForm();
+                if (!data) {
+                    throw new Error('Failed to load province data');
+                }
+
+                // Update state
+                this.state.currentId = id;
+                this.state.originalData = data;
+                
+                // Setup modal
+                this.modal.setMode('update');
                 this.modal.setTitle('Edit Provinsi');
+                this.modal.setFormData({
+                    name: data.name
+                });
+
+                // Show modal
                 this.modal.show();
                 
-                // Set form data
-                this.modal.$form.find('#provinceName').val(response.data.name);
-                
+                console.log('ProvinceUpdate: Province data loaded successfully');
+
             } catch (error) {
+                console.error('ProvinceUpdate: Error loading province:', error);
                 irToast.error('Gagal memuat data provinsi');
             }
-        }
-
-        setFormData(data) {
-            if (!data) return;
-
-            const form = this.modal.$form[0];
-            const nameField = form?.querySelector('#provinceName');
-
-            if (!form || !nameField) return;
-
-            form.reset();
-            nameField.value = data.name;
-            $(nameField).trigger('change');
         }
 
         validateId(id) {
@@ -96,13 +138,13 @@
 
         async loadProvinceData(id) {
             try {
+                console.log('ProvinceUpdate: Fetching province data');
                 const response = await irAPI.province.get(id);
                 
                 if (!response.success) {
                     throw new Error(response.data?.message || 'Failed to load province data');
                 }
 
-                irCache.set('provinces', id, response.data);
                 return response.data;
 
             } catch (error) {
@@ -112,77 +154,80 @@
         }
 
         async validateForm($form) {
-            console.log('Validating form...');
-            console.log('Form field value:', {
-                raw: $form.find('#provinceName').val(),
-                trimmed: $form.find('#provinceName').val()?.trim(),
-                field: $form.find('#provinceName')[0],
-                fieldType: $form.find('#provinceName')[0]?.type,
-                hasValue: $form.find('#provinceName')[0]?.hasValue
-            });
-
-            const name = $form.find('#provinceName').val()?.trim();
-            console.log('Validation check:', {
-                name: name,
-                isEmpty: !name,
-                length: name?.length
-            });
-            /*    
-            if (!name) {
-                console.log('Validation failed: Empty name');
-                this.modal.showError('provinceName', 'Nama provinsi tidak boleh kosong');
-                return false;
-            }
-            */
-
-            // Check duplicate
             try {
+                const name = $form.find('#provinceName').val()?.trim();
+                console.log('ProvinceUpdate: Validating name:', name);
+
+                // Basic validation
+                if (!name) {
+                    this.modal.showError('provinceName', 'Nama provinsi tidak boleh kosong');
+                    return false;
+                }
+
+                if (name === this.state.originalData?.name) {
+                    return true; // Name unchanged, skip duplicate check
+                }
+
+                // Check for duplicate name
                 const response = await irAPI.province.checkName(name, this.state.currentId);
                 if (!response.success) {
                     this.modal.showError('provinceName', 'Nama provinsi sudah digunakan');
                     return false;
                 }
-            } catch {
-                return false;
-            }
 
-            return true;
-        }
+                return true;
 
-        async checkDuplicateName(name) {
-            if (this.state.validationTimer) {
-                clearTimeout(this.state.validationTimer);
-            }
-
-            try {
-                const response = await irAPI.province.checkName(name, this.state.currentId);
-                return !response.success;
             } catch (error) {
-                console.error('ProvinceUpdate: Name check error:', error);
-                return true; // Assume duplicate on error for safety
+                console.error('ProvinceUpdate: Validation error:', error);
+                this.modal.showError('provinceName', 'Gagal melakukan validasi');
+                return false;
             }
         }
 
         async handleSave(formData) {
-            if (this.state.isProcessing || !this.state.currentId) return;
+            if (this.state.isProcessing || !this.state.currentId) {
+                console.warn('ProvinceUpdate: Save prevented - processing or no ID');
+                return;
+            }
             
+            // Double check the form data before proceeding
+            const name = formData.get('name');
+            if (!name || !name.trim()) {
+                console.error('ProvinceUpdate: Empty name detected before save');
+                this.modal.showError('provinceName', 'Nama provinsi tidak boleh kosong');
+                return;
+            }
+
             this.state.isProcessing = true;
             this.modal.clearErrors();
             
             try {
-                formData.append('id', this.state.currentId);
+                console.log('ProvinceUpdate: Saving data for ID:', this.state.currentId);
+                console.log('ProvinceUpdate: Form data being sent:', {
+                    id: formData.get('id'),
+                    name: formData.get('name'),
+                    action: 'ir_update_province'
+                });
+
+                // Add required fields
                 formData.append('action', 'ir_update_province');
                 formData.append('nonce', irSettings.nonce);
 
                 const response = await irAPI.province.update(formData);
+                console.log('ProvinceUpdate: Save response:', response);
                 
                 if (response.success) {
+                    console.log('ProvinceUpdate: Save successful');
                     irToast.success('Provinsi berhasil diupdate');
+                    
+                    // Important: Hide modal before triggering success callback
                     this.modal.hide();
+                    
                     if (typeof this.onSuccess === 'function') {
-                        this.onSuccess(this.state.currentId);
+                        await this.onSuccess(this.state.currentId);
                     }
                 } else {
+                    console.error('ProvinceUpdate: Save failed:', response.data);
                     if (response.data?.field) {
                         this.modal.showError(response.data.field, response.data.message);
                     } else {
@@ -191,6 +236,7 @@
                 }
 
             } catch (error) {
+                console.error('ProvinceUpdate: Save error:', error);
                 irToast.error('Terjadi kesalahan sistem');
             } finally {
                 this.state.isProcessing = false;
@@ -198,16 +244,20 @@
         }
 
         destroy() {
-            this.modal.$form.off('submit');
-            this.modal.$modal.off('hidden.bs.modal');
+            console.log('ProvinceUpdate: Destroying instance');
+            this.modal?.$form.off('submit');
+            this.modal?.$modal.off('hide.baseModal');
             this.modal?.destroy();
             this.state = null;
         }
 
-        // Callback untuk ProvinceManager
-        onSuccess() {}
+        // Callback placeholder - akan di-override oleh ProvinceManager
+        onSuccess() {
+            console.log('ProvinceUpdate: Default success callback - should be overridden');
+        }
     }
 
+    // Export ProvinceUpdate
     window.irProvinceUpdate = ProvinceUpdate;
 
 })(jQuery);

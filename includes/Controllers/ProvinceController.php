@@ -2,7 +2,7 @@
 /**
  * File: includes/Controllers/ProvinceController.php
  * Version: 1.0.0
- * Revisi-1
+ * Revisi-2
  * 
  * Changelog:
  * - Fix nonce verification
@@ -492,26 +492,38 @@ class ProvinceController {
      * Handle AJAX request to update province
      */
     public function ajax_update_province() {
+        error_log('UPDATE PROVINCE REQUEST START ----------------');
+        error_log('POST data: ' . print_r($_POST, true));
+        error_log('REQUEST data: ' . print_r($_REQUEST, true));
+        error_log('FILES data: ' . print_r($_FILES, true));
+        
         check_ajax_referer('ir_nonce', 'nonce');
         
         if (!current_user_can('manage_options')) {
+            error_log('Authorization failed');
             wp_send_json_error(array('message' => 'Unauthorized'), 403);
         }
 
         $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
         $name = isset($_POST['name']) ? sanitize_text_field($_POST['name']) : '';
         
+        error_log('Processed data - id: ' . $id . ', name: ' . $name);
+        
         if (!$id || empty($name)) {
-            wp_send_json_error(array(
+            $error = array(
                 'field' => empty($name) ? 'provinceName' : '',
                 'message' => empty($name) ? 'Nama provinsi tidak boleh kosong' : 'ID provinsi tidak valid'
-            ));
+            );
+            error_log('Validation failed: ' . print_r($error, true));
+            wp_send_json_error($error);
         }
 
         try {
             $result = $this->model->update($id, $name);
+            error_log('Update result: ' . print_r($result, true));
             
             if (is_wp_error($result)) {
+                error_log('WP Error: ' . $result->get_error_message());
                 wp_send_json_error(array(
                     'field' => 'provinceName',
                     'message' => $result->get_error_message()
@@ -523,11 +535,14 @@ class ProvinceController {
             ));
 
         } catch (\Exception $e) {
+            error_log('Exception: ' . $e->getMessage());
             wp_send_json_error(array(
                 'message' => $e->getMessage()
             ));
         }
+        error_log('UPDATE PROVINCE REQUEST END ----------------');
     }
+    
 
     /**
      * Handle AJAX request to delete province
@@ -632,5 +647,6 @@ public function ajax_get_cities() {
     private function get_version() {
         return defined('WP_DEBUG') && WP_DEBUG ? time() : IR_VERSION;
     }
+
 
 }

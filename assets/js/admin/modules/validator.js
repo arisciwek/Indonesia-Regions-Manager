@@ -1,8 +1,12 @@
 /**
  * File: assets/js/admin/modules/validator.js
- * Version: 1.0.0
- * Revisi-4
- * Deskripsi: Form validator untuk provinsi dengan logic yang disederhanakan
+ * Version: 1.0.1
+ * Last Updated: 2024-11-20 12:00:00
+ * 
+ * Changelog v1.0.1:
+ * - Fix: Name pattern to allow more characters
+ * - Add: Debug logging for validation process
+ * - Fix: Debounce time for name checking
  */
 
 (function($) {
@@ -13,13 +17,13 @@
             this.rules = {
                 name: {
                     minLength: 3,
-                    maxLength: 101,
-                    pattern: /^[a-zA-Z\s]+$/,  // Hanya huruf dan spasi
+                    maxLength: 100,
+                    pattern: /^[a-zA-Z0-9\s]+$/, // Allow letters, numbers, spaces
                     messages: {
                         required: 'Nama tidak boleh kosong',
                         minLength: 'Nama minimal 3 karakter',
                         maxLength: 'Nama maksimal 100 karakter',
-                        pattern: 'Nama hanya boleh mengandung huruf dan spasi',
+                        pattern: 'Nama hanya boleh mengandung huruf, angka dan spasi',
                         duplicate: 'Nama sudah ada'
                     }
                 }
@@ -29,11 +33,13 @@
         }
 
         validateField(field, value, customRules = {}) {
+            console.log('Validator: Validating field:', field, 'value:', value);
+            
             const rule = { ...this.rules[field], ...customRules };
             if (!rule) return { valid: true };
 
             // Trim value
-            value = value.trim();
+            value = String(value || '').trim();
 
             // Required check
             if (!value) {
@@ -81,7 +87,7 @@
                         type: 'POST',
                         data: {
                             action: checkEndpoint,
-                            name: value,
+                            name: value?.trim(),
                             nonce: irSettings.nonce,
                             ...additionalData
                         },
@@ -95,17 +101,15 @@
                             resolve({ valid: true }); // Fail silently on network error
                         }
                     });
-                }, 500); // Debounce 500ms
+                }, 500);
             });
         }
 
-        // Add method untuk custom rules
         addRule(field, rule) {
             this.rules[field] = { ...this.rules[field], ...rule };
         }
     }
 
-    // Export validator
     window.irValidator = new Validator();
 
 })(jQuery);

@@ -1,13 +1,16 @@
 /**
  * File: assets/js/admin/features/province/create.js
- * Version: 1.0.4
- * Description: Province creation handler
+ * Version: 1.2.0
+ * Last Updated: 2024-11-20 08:30:00
  * 
- * Changelog v1.0.4 (2024-11-17):
- * - Fix: Modal form conflict with update operation
- * - Fix: Removed unnecessary console logs
- * - Fix: Added proper event namespace
- * - Fix: Improved form submission handling
+ * Changelog v1.2.0:
+ * - Complete rewrite form data handling
+ * - Add proper state management
+ * - Improve validation flow
+ * - Add comprehensive error handling
+ * - Add console logging for debugging
+ * - Fix event cleanup
+ * - Match patterns with update.js
  */
 
 (function($) {
@@ -15,106 +18,133 @@
 
     class ProvinceCreate {
         constructor() {
+            this.state = {
+                isProcessing: false,
+                lastValidatedName: null
+            };
+
             this.modal = new irFormModal('provinceModal', {
                 onSave: (formData) => this.handleSave(formData),
                 validator: (form) => this.validateForm(form),
-                mode: 'create'
-            });
-
-            this.modal.$form[0].reset();
-            this.initializeEvents();
-
-            // Bind submit button langsung ke form
-            this.modal.$submitButton.off('click').on('click', (e) => {
-                e.preventDefault();
-                this.modal.$form.submit();
-            });
-
-            // Bind form submit event
-            this.modal.$form.off('submit').on('submit', async (e) => {
-                e.preventDefault();
-                if (!this.modal.isSubmitting) {
-                    const formData = new FormData(e.target);
-                    await this.handleSave(formData);
+                mode: 'create',
+                validationRules: {
+                    required: true,
+                    minLength: 3,
+                    maxLength: 100,
+                    pattern: /^[a-zA-Z\s]+$/,
+                    messages: {
+                        required: 'Nama provinsi tidak boleh kosong',
+                        minLength: 'Nama provinsi minimal 3 karakter',
+                        maxLength: 'Nama provinsi maksimal 100 karakter',
+                        pattern: 'Nama provinsi hanya boleh mengandung huruf dan spasi'
+                    }
                 }
             });
+
+            this.initializeEvents();
+            console.log('ProvinceCreate: Initialized');
         }
 
         initializeEvents() {
-            this.modal.$form.off('submit.createHandler').on('submit.createHandler', async (e) => {
+            // Form submission handler
+            this.modal.$form.off('submit').on('submit', async (e) => {
                 e.preventDefault();
-                if (!this.modal.isSubmitting && this.modal.options.mode === 'create') {
+                
+                const formValid = await this.validateForm(this.modal.$form);
+                if (!formValid) {
+                    console.log('ProvinceCreate: Form validation failed');
+                    return;
+                }
+
+                if (!this.state.isProcessing) {
                     const formData = new FormData(e.target);
                     await this.handleSave(formData);
                 }
             });
+
+            // Modal close handler
+            this.modal.$modal.on('hide.baseModal', () => {
+                this.resetState();
+            });
+
+            console.log('ProvinceCreate: Events initialized');
+        }
+
+        resetState() {
+            console.log('ProvinceCreate: Resetting state');
+            this.state = {
+                isProcessing: false,
+                lastValidatedName: null
+            };
+            this.modal.clearErrors();
         }
 
         show() {
-            this.modal.resetForm();
+            console.log('ProvinceCreate: Showing create modal');
             this.modal.setMode('create');
             this.modal.setTitle('Tambah Provinsi');
+            this.modal.resetForm();
             this.modal.show();
         }
-        
-        async validateForm($form, mode) {
+
+        async validateForm($form) {
             try {
-                if (mode !== 'create') return true; // Skip jika bukan mode create
+                const name = $form.find('#provinceName').val()?.trim();
                 
-                const name = $form.find('#provinceName').val();
+                console.log('ProvinceCreate: Validating name:', name);
+
+                // Skip if same as last validated
+                if (name === this.state.lastValidatedName) {
+                    return true;
+                }
 
                 // Basic validation
-                const result = irValidator.validateField('name', name);
-                
-                if (!result.valid) {
-                    this.modal.showError('provinceName', result.message);
+                if (!name) {
+                    this.modal.showError('provinceName', 'Nama provinsi tidak boleh kosong');
                     return false;
                 }
 
-                // Check duplicate
-                try {
-                    const response = await $.ajax({
-                        url: irSettings.ajaxurl,
-                        type: 'POST',
-                        data: {
-                            action: 'ir_check_province_name',
-                            name: name,
-                            mode: 'create',
-                            nonce: irSettings.nonce
-                        }
-                    });
-
-                    if (!response.success) {
-                        this.modal.showError('provinceName', response.data.message);
-                        return false;
-                    }
-                } catch (error) {
+                // Check for duplicate name
+                const response = await irAPI.province.checkName(name);
+                if (!response.success) {
+                    this.modal.showError('provinceName', 'Nama provinsi sudah digunakan');
                     return false;
                 }
+
+                // Update last validated name
+                this.state.lastValidatedName = name;
                 return true;
+
             } catch (error) {
+                console.error('ProvinceCreate: Validation error:', error);
                 this.modal.showError('provinceName', 'Gagal melakukan validasi');
                 return false;
             }
         }
 
         async handleSave(formData) {
+            if (this.state.isProcessing) {
+                console.warn('ProvinceCreate: Save prevented - already processing');
+                return;
+            }
+
+            this.state.isProcessing = true;
+            this.modal.clearErrors();
+
             try {
+                console.log('ProvinceCreate: Processing save');
+
+                // Prepare form data
                 formData.append('action', 'ir_create_province');
                 formData.append('nonce', irSettings.nonce);
 
-                const response = await $.ajax({
-                    url: irSettings.ajaxurl,
-                    type: 'POST',
-                    data: formData,
-                    processData: false,
-                    contentType: false
-                });
+                const response = await irAPI.province.create(formData);
 
                 if (response.success) {
+                    console.log('ProvinceCreate: Save successful');
                     irToast.success('Provinsi berhasil ditambahkan');
                     this.modal.hide();
-                    
+
                     if (typeof this.onSuccess === 'function') {
                         this.onSuccess(response.data);
                     }
@@ -125,9 +155,26 @@
                         irToast.error(response.data?.message || 'Gagal menyimpan data');
                     }
                 }
+
             } catch (error) {
+                console.error('ProvinceCreate: Save error:', error);
                 irToast.error('Terjadi kesalahan sistem');
+            } finally {
+                this.state.isProcessing = false;
             }
+        }
+
+        destroy() {
+            console.log('ProvinceCreate: Destroying instance');
+            this.modal?.$form.off('submit');
+            this.modal?.$modal.off('hide.baseModal');
+            this.modal?.destroy();
+            this.state = null;
+        }
+
+        // Callback placeholder - akan di-override oleh ProvinceManager
+        onSuccess() {
+            console.log('ProvinceCreate: Default success callback - should be overridden');
         }
     }
 

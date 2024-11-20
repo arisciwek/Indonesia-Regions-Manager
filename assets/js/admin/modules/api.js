@@ -12,8 +12,24 @@
     'use strict';
 
     const api = {
-        // Basic AJAX request handler
         request: function(action, data = {}, method = 'POST') {
+            const isFormData = data instanceof FormData;
+            
+            if (isFormData) {
+                // Jika data adalah FormData, tambahkan action dan nonce
+                data.append('action', action);
+                data.append('nonce', irSettings.nonce);
+                
+                return $.ajax({
+                    url: irSettings.ajaxurl,
+                    type: method,
+                    data: data,
+                    processData: false,
+                    contentType: false
+                });
+            }
+            
+            // Jika bukan FormData, gunakan cara lama
             return $.ajax({
                 url: irSettings.ajaxurl,
                 type: method,

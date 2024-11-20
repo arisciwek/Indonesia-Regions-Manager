@@ -1,7 +1,7 @@
 /**
  * File: assets/js/admin/features/province/index.js  
  * Version: 1.2.1
- * Terakhir Diperbarui: 2024-11-20 02:30:00
+ * Terakhir Diperbarui: 2024-11-20 03:31:00
  * Deskripsi: Province Manager dengan fitur pemuatan data terpusat dan pengelolaan state
  * 
  * Changelog:
@@ -314,10 +314,21 @@
                 // Reload table
                 await this.table.reload();
                 
-                // Load fresh data
-                await this.loadAndDisplayProvince(id, 'update');
+                // Get fresh data before loading detail
+                const response = await irAPI.province.get(id);
+                if (!response.success) {
+                    throw new Error(response.data?.message || 'Failed to load province data');
+                }
+                
+                // Update cache with new data
+                irCache.set('provinces', id, response.data);
+                
+                // Update UI with new data
+                await this.updateUI(id, response.data);
+
             } catch (error) {
-                this.handleError(error, id, 'update');
+                console.error('ProvinceManager: Update refresh error:', error);
+                irToast.error('Data berhasil disimpan tetapi gagal memperbarui tampilan');
             }
         }
 
