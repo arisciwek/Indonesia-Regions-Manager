@@ -1,24 +1,18 @@
 /**
  * File: assets/js/admin/features/province/index.js  
- * Version: 1.2.1
- * Terakhir Diperbarui: 2024-11-20 03:42:10
- * Deskripsi: Province Manager dengan fitur pemuatan data terpusat dan pengelolaan state
+ * Version: 1.2.2
+ * Terakhir Diperbarui: 2024-11-20 15:46:15
  * 
  * Changelog:
- * v1.2.1 - 2024-11-20 15:65:00 WIB
- * - Fix: Source handling untuk link click di tabel
- * - Add: Event handler untuk province-link click
- * - Fix: Double loading issue pada hash change
- * - Add: Source tracking yang lebih akurat
- * - Improve: Event handling untuk navigasi
+ * v1.2.2 - 2024-11-20 15:45:00 WIB
+ * - Add: Sinkronisasi loading state dengan DetailPanel
+ * - Fix: Race condition saat multiple data load requests
+ * - Add: Loading state check sebelum operasi data
+ * - Fix: Timing untuk update UI setelah data load
+ * - Fix: Edge case saat navigasi selama loading
  * 
- * v1.2.0 - 2024-11-19
- * - Refactor: Pemisahan validasi berdasarkan sumber ID
- * - Add: Pengecekan eksistensi provinsi untuk direct access
- * - Add: Source-specific data loading strategy
- * - Add: State tracking yang lebih detail
- * - Fix: Data loading setelah update
- * - Fix: Cache management untuk update case
+ * Note: Perubahan minimal yang fokus pada sinkronisasi loading state
+ * tanpa mengubah alur kerja dasar yang sudah ada
  */
 
 (function($) {
@@ -32,7 +26,9 @@
                 lastUpdated: null,
                 dataSource: null,
                 loadingSource: null,
-                hashChangeBlocked: false
+                hashChangeBlocked: false,
+                pendingLoadRequest: null,
+                isCancelled: false
             };
 
             // Initialize components
@@ -49,22 +45,42 @@
         }
 
         /**
-         * Centralized data loading dengan source-specific handling
+         * Centralized data loading dengan pengecekan loading state
          */
         async loadAndDisplayProvince(id, source = 'direct') {
+            // Check if we should cancel current loading
             if (this.state.isLoading) {
-                console.log('ProvinceManager: Already loading, skipping');
-                return;
+                if (this.state.loadingSource === 'direct' && source !== 'direct') {
+                    console.log('ProvinceManager: Deferring load request during direct load');
+                    this.state.pendingLoadRequest = { id, source };
+                    return;
+                }
+                
+                // Cancel current loading if new request is more important
+                if (this.shouldCancelCurrentLoading(source)) {
+                    this.state.isCancelled = true;
+                    console.log('ProvinceManager: Cancelling current load for new request');
+                }
+                
+                // Wait for current loading to finish
+                await this.waitForLoadingComplete();
             }
 
             try {
                 this.state.isLoading = true;
                 this.state.loadingSource = source;
+                this.state.isCancelled = false;
                 console.log(`ProvinceManager: Loading province ${id} from ${source}`);
 
                 // Source-specific validation
                 if (!await this.validateProvinceId(id, source)) {
                     throw new Error('Invalid province ID');
+                }
+
+                // Check cancellation before proceeding
+                if (this.state.isCancelled) {
+                    console.log('ProvinceManager: Load cancelled');
+                    return;
                 }
 
                 // Determine loading strategy based on source
@@ -101,6 +117,12 @@
                     throw new Error('Province not found');
                 }
 
+                // Final cancellation check before UI update
+                if (this.state.isCancelled) {
+                    console.log('ProvinceManager: Load cancelled before UI update');
+                    return;
+                }
+
                 // Update state and cache
                 this.state.currentId = id;
                 this.state.dataSource = source;
@@ -112,11 +134,52 @@
                 console.log(`ProvinceManager: Successfully loaded province ${id}`);
 
             } catch (error) {
-                this.handleError(error, id, source);
+                if (!this.state.isCancelled) {
+                    this.handleError(error, id, source);
+                }
             } finally {
                 this.state.isLoading = false;
                 this.state.loadingSource = null;
+
+                // Process any pending requests
+                if (this.state.pendingLoadRequest) {
+                    const { id, source } = this.state.pendingLoadRequest;
+                    this.state.pendingLoadRequest = null;
+                    await this.loadAndDisplayProvince(id, source);
+                }
             }
+        }
+
+        /**
+         * Check if current loading should be cancelled for new request
+         */
+        shouldCancelCurrentLoading(newSource) {
+            const currentSource = this.state.loadingSource;
+            
+            // Direct load takes precedence
+            if (newSource === 'direct') return true;
+            
+            // Create/Update take precedence over table navigation
+            if ((newSource === 'create' || newSource === 'update') && 
+                currentSource === 'table') return true;
+            
+            return false;
+        }
+
+        /**
+         * Wait for current loading to complete
+         */
+        async waitForLoadingComplete() {
+            return new Promise(resolve => {
+                const checkLoading = () => {
+                    if (!this.state.isLoading) {
+                        resolve();
+                    } else {
+                        setTimeout(checkLoading, 100);
+                    }
+                };
+                checkLoading();
+            });
         }
 
         /**
@@ -183,6 +246,9 @@
          * Update UI components with new data
          */
         async updateUI(id, data) {
+            // Check loading state before updating UI
+            if (this.state.isCancelled) return;
+
             // Update detail panel
             await this.detail.displayData(data);
             
@@ -210,8 +276,6 @@
          * Initialize component callbacks
          */
         initializeCallbacks() {
-            console.log('ProvinceManager: Setting up callbacks');
-
             // Create callbacks
             this.create.onSuccess = async (data) => {
                 console.log('ProvinceManager: Create success callback');
@@ -251,8 +315,6 @@
                 console.log('ProvinceManager: Detail delete callback');
                 this.delete.delete(id);
             };
-
-            console.log('ProvinceManager: Callbacks setup complete');
         }
 
         /**
@@ -314,17 +376,8 @@
                 // Reload table
                 await this.table.reload();
                 
-                // Get fresh data before loading detail
-                const response = await irAPI.province.get(id);
-                if (!response.success) {
-                    throw new Error(response.data?.message || 'Failed to load province data');
-                }
-                
-                // Update cache with new data
-                irCache.set('provinces', id, response.data);
-                
-                // Update UI with new data
-                await this.updateUI(id, response.data);
+                // Get fresh data
+                await this.loadAndDisplayProvince(id, 'update');
 
             } catch (error) {
                 console.error('ProvinceManager: Update refresh error:', error);
@@ -357,10 +410,6 @@
             if (source === 'direct') {
                 irHelper.setHashId('');
             }
-
-            // Reset loading state
-            this.state.isLoading = false;
-            this.state.loadingSource = null;
 
             // Show user-friendly error
             if (error.response) {
