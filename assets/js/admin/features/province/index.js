@@ -420,6 +420,65 @@
                 irToast.error(error.message || 'An unexpected error occurred');
             }
         }
+                
+        /**
+         * Validate ID based on source
+         */
+        async validateProvinceId(id, source) {
+            // Basic validation
+            if (!id || isNaN(id)) {
+                console.error('ProvinceManager: Invalid ID format');
+                return false;
+            }
+
+            switch (source) {
+                case 'table':
+                    // ID from table is pre-validated
+                    return true;
+
+                case 'create':
+                    // New ID from server is always valid
+                    return true;
+
+                case 'update':
+                    // Untuk update, ID apapun valid karena sudah divalidasi oleh form
+                    return true;
+
+                case 'direct':
+                    // Need to verify existence
+                    return await this.validateProvinceExists(id);
+
+                default:
+                    console.error('ProvinceManager: Unknown source', source);
+                    return false;
+            }
+        }
+
+        /**
+         * Handle successful update dengan flow yang benar
+         */
+        async handleUpdateSuccess(id) {
+            try {
+                console.log('ProvinceManager: Handling update success for ID:', id);
+                
+                // Clear cache untuk ID yang diupdate
+                irCache.remove('provinces', id);
+                
+                // Reload table data
+                await this.table.reload();
+
+                // Update URL dan load detail terbaru
+                irHelper.setHashId(id);
+                this.state.currentId = id; // Update currentId ke ID yang baru diupdate
+                
+                // Load dan tampilkan data terbaru
+                await this.loadAndDisplayProvince(id, 'update');
+
+            } catch (error) {
+                console.error('ProvinceManager: Update refresh error:', error);
+                irToast.error('Data berhasil disimpan tetapi gagal memperbarui tampilan');
+            }
+        }
     }
 
     // Export ProvinceManager
