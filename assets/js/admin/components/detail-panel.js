@@ -1,7 +1,7 @@
 /**
  * File: assets/js/admin/components/detail-panel.js
  * Version: 1.0.6
- * Last Updated: 2024-11-20 13:31:12
+ * Last Updated: 2024-11-20 13:32:14
  * 
  * Changes: 
  * - Fokus pada peran sebagai parent panel

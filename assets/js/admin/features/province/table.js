@@ -1,7 +1,7 @@
 /**
  * File: assets/js/admin/features/province/table.js
  * Version: 1.1.2
- * Terakhir Diperbarui: 2024-11-20 02:23:11
+ * Terakhir Diperbarui: 2024-11-20 02:24:12
  * Deskripsi: Pengelola tabel provinsi dengan integrasi DataTable dan pengelolaan state
  * 
  * Changelog:
