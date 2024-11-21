@@ -1,266 +1,308 @@
 /**
- * File: assets/js/admin/components/detail-panel.js
- * Version: 1.0.5
- * Last Updated: 2024-11-20 00:02:21
- * 
- * Changes: 
- * - Add proper loading UI with spinner
- * - Fix loading state transitions
- * - Add loading visibility control
- * - Improve content visibility control
- * - Add utility methods for loading state
- */
+* File: assets/js/admin/components/detail-panel.js
+* Version: 1.0.7
+* Last Updated: 2024-11-20 11:01:00
+* 
+* Changes: 
+* - Fix: Perbaikan selector loading state ke class '.ir-loading'
+* - Fix: Cara akses loading element untuk support selector ganda
+* - Maintain: Semua perbaikan sebelumnya 
+* - Add: Debug log untuk element loading
+*/
 
 (function($) {
-    'use strict';
+   'use strict';
 
-    class DetailPanel {
-        constructor(options = {}) {
-            this.options = {
-                mainContentSelector: '.ir-provinces',
-                detailContentSelector: '.ir-provinces-detail',
-                loadingSelector: '.ir-loading',
-                contentSelector: '.ir-content',
-                tabButtonSelector: '.ir-tab',
-                tabContentSelector: '.ir-tab-content',
-                activeClass: 'active',
-                onLoad: () => {},
-                onShow: () => {},
-                onHide: () => {},
-                onTabChange: () => {},
-                ...options
+   class DetailPanel {
+       constructor(options = {}) {
+           this.options = {
+               mainContentSelector: '.ir-provinces',
+               detailContentSelector: '.ir-provinces-detail', 
+               loadingSelector: '.ir-loading', // Menggunakan class selector
+               contentSelector: '#provinceDetail',
+               tabButtonSelector: '.ir-tab',
+               tabContentSelector: '.ir-tab-content',
+               activeClass: 'active',
+               onLoad: () => {},
+               onShow: () => {},
+               onHide: () => {},
+               onTabChange: () => {},
+               ...options
+           };
 
-                // Update DOM elements references
-                this.$mainContent = $(this.options.mainContentSelector);
-                this.$detailContent = $(this.options.detailContentSelector);
-                this.$loading = this.$detailContent.find(this.options.loadingSelector);
-                this.$content = this.$detailContent.find(this.options.contentSelector);
-                
-                // Initialize panel state
-                this.hideLoading();
-                this.$content.show();
+           // Cache DOM elements
+           this.$mainContent = $(this.options.mainContentSelector);
+           this.$detailContent = $(this.options.detailContentSelector);
+           // Akses loading element dengan scope detail content
+           this.$loading = this.$detailContent.find(this.options.loadingSelector);
+           this.$content = this.$detailContent.find(this.options.contentSelector);
+           
+           // State management
+           this.currentId = null;
+           this.activeTab = null;
+           this.isInitialized = false;
+           this.isLoading = false;
+           this.tabsInitialized = false;
 
-                this.$loading = this.$detailContent.find('#provinceDetailLoading');
-                this.$content = this.$detailContent.find('#provinceDetail');
-                this.hideLoading();
-            };
+           // Initialize loading
+           this.initLoading();
+           
+           // Initialize events
+           this.initializeEvents();
+           
+           console.log('[DetailPanel] Initialized with elements:', {
+               loading: {
+                   found: this.$loading.length > 0,
+                   selector: this.options.loadingSelector,
+                   element: this.$loading
+               },
+               content: {
+                   found: this.$content.length > 0,
+                   selector: this.options.contentSelector,
+                   element: this.$content
+               }
+           });
+       }
 
-            // Cache DOM elements
-            this.$mainContent = $(this.options.mainContentSelector);
-            this.$detailContent = $(this.options.detailContentSelector);
-            this.$loading = this.$detailContent.find(this.options.loadingSelector);
-            this.$content = this.$detailContent.find(this.options.contentSelector);
-            
-            // State management
-            this.currentId = null;
-            this.activeTab = null;
-            this.isInitialized = false;
-            this.isLoading = false;
-            this.tabsInitialized = false;
+       initLoading() {
+           if(!this.$loading.length) {
+               console.warn('[DetailPanel] Loading element not found');
+               return;
+           }
+           
+           // Hide both loading & content initially
+           this.$loading.hide();
+           if(this.$content.length) {
+               this.$content.hide(); 
+           }
+       }
 
-            // Initialize loading UI
-            this.initializeLoadingUI();
-            
-            // Initialize events
-            this.initializeEvents();
-        }
+       initializeTabs() {
+           // Refresh DOM references
+           this.$tabButtons = this.$detailContent.find(this.options.tabButtonSelector);
+           this.$tabContents = this.$detailContent.find(this.options.tabContentSelector);
+           
+           if (this.$tabButtons.length === 0) {
+               console.warn('[DetailPanel] No tab buttons found, will retry after content load');
+               return false;
+           }
 
-        initializeLoadingUI() {
-            // Remove existing text content
-            this.$loading.empty();
-            
-            // Add spinner HTML
-            this.$loading.html(`
-                <div class="ir-spinner-container">
-                    <div class="ir-spinner"></div>
-                </div>
-            `);
+           // Set active tab
+           const $activeTab = this.$tabButtons.filter(`.${this.options.activeClass}`);
+           if ($activeTab.length) {
+               this.activeTab = $activeTab.first().data('tab');
+           } else {
+               const $firstTab = this.$tabButtons.first();
+               $firstTab.addClass(this.options.activeClass);
+               this.activeTab = $firstTab.data('tab');
+           }
 
-            // Hide loading by default
-            this.$loading.hide();
-        }
+           this.tabsInitialized = true;
+           console.log('[DetailPanel] Tabs initialized:', {
+               activeTab: this.activeTab,
+               tabCount: this.$tabButtons.length
+           });
 
-        initializeTabs() {
-            // Refresh DOM references
-            this.$tabButtons = this.$detailContent.find(this.options.tabButtonSelector);
-            this.$tabContents = this.$detailContent.find(this.options.tabContentSelector);
-            
-            if (this.$tabButtons.length === 0) {
-                console.warn('[DetailPanel] No tab buttons found, will retry after content load');
-                return false;
-            }
+           return true;
+       }
 
-            // Set active tab
-            const $activeTab = this.$tabButtons.filter(`.${this.options.activeClass}`);
-            if ($activeTab.length) {
-                this.activeTab = $activeTab.first().data('tab');
-            } else {
-                const $firstTab = this.$tabButtons.first();
-                $firstTab.addClass(this.options.activeClass);
-                this.activeTab = $firstTab.data('tab');
-            }
+       initializeEvents() {
+           // Clean up existing events
+           $(window).off('hashchange.detailPanel');
+           this.$detailContent.off('click.detailPanel');
 
-            this.tabsInitialized = true;
+           // Reinitialize events
+           $(window).on('hashchange.detailPanel', () => {
+               this.handleHashChange();
+           });
 
-            return true;
-        }
+           this.$detailContent.on('click.detailPanel', this.options.tabButtonSelector, (e) => {
+               e.preventDefault();
+               const $clickedTab = $(e.currentTarget);
+               const tabId = $clickedTab.data('tab');
+               if (tabId && !this.isLoading) {
+                   this.switchTab(tabId);
+               }
+           });
+       }
 
-        initializeEvents() {
-            // Clean up existing events
-            $(window).off('hashchange.detailPanel');
-            this.$detailContent.off('click.detailPanel');
+       async switchTab(tabId) {
+           // Validasi dasar
+           if (!tabId) return;
 
-            // Reinitialize events
-            $(window).on('hashchange.detailPanel', () => {
-                this.handleHashChange();
-            });
+           // Cek apakah tabs sudah diinisialisasi
+           if (!this.tabsInitialized) {
+               if (!this.initializeTabs()) return;
+           }
 
-            this.$detailContent.on('click.detailPanel', this.options.tabButtonSelector, (e) => {
-                e.preventDefault();
-                const $clickedTab = $(e.currentTarget);
-                const tabId = $clickedTab.data('tab');
-                if (tabId && !this.isLoading) {
-                    this.switchTab(tabId);
-                }
-            });
-        }
+           const $targetButton = this.$tabButtons.filter(`[data-tab="${tabId}"]`);
+           const $targetContent = this.$tabContents.filter(`#${tabId}Content`);
 
-        async switchTab(tabId) {
-            // Validasi dasar
-            if (!tabId) return;
+           if (!$targetButton.length || !$targetContent.length) {
+               console.error('[DetailPanel] Tab not found:', {
+                   tabId: tabId,
+                   buttonFound: $targetButton.length > 0,
+                   contentFound: $targetContent.length > 0
+               });
+               return;
+           }
 
-            // Cek apakah tabs sudah diinisialisasi
-            if (!this.tabsInitialized) {
-                if (!this.initializeTabs()) return;
-            }
+           // Prevent switching if same tab
+           if (this.activeTab === tabId) return;
 
-            const $targetButton = this.$tabButtons.filter(`[data-tab="${tabId}"]`);
-            const $targetContent = this.$tabContents.filter(`#${tabId}Content`);
+           // Update UI
+           this.$tabButtons.removeClass(this.options.activeClass);
+           this.$tabContents.removeClass(this.options.activeClass);
 
-            if (!$targetButton.length || !$targetContent.length) {
-                console.error('[DetailPanel] Tab not found:', {
-                    tabId: tabId,
-                    buttonFound: $targetButton.length > 0,
-                    contentFound: $targetContent.length > 0
-                });
-                return;
-            }
+           $targetButton.addClass(this.options.activeClass);
+           $targetContent.addClass(this.options.activeClass);
 
-            // Prevent switching if same tab
-            if (this.activeTab === tabId) return;
+           // Update state
+           this.activeTab = tabId;
+           this.saveActiveTab(tabId);
 
-            // Update UI
-            this.$tabButtons.removeClass(this.options.activeClass);
-            this.$tabContents.removeClass(this.options.activeClass);
+           // Trigger callback
+           if (typeof this.options.onTabChange === 'function') {
+               this.options.onTabChange(tabId);
+           }
+       }
 
-            $targetButton.addClass(this.options.activeClass);
-            $targetContent.addClass(this.options.activeClass);
+       saveActiveTab(tabId) {
+           if (this.currentId) {
+               try {
+                   localStorage.setItem(`ir_active_tab_${this.currentId}`, tabId);
+               } catch (error) {
+                   console.warn('[DetailPanel] Failed to save tab state:', error);
+               }
+           }
+       }
 
-            // Update state
-            this.activeTab = tabId;
-            this.saveActiveTab(tabId);
+       loadSavedTab() {
+           if (!this.currentId || !this.tabsInitialized) {
+               return;
+           }
 
-            // Trigger callback
-            if (typeof this.options.onTabChange === 'function') {
-                this.options.onTabChange(tabId);
-            }
-        }
+           try {
+               const savedTab = localStorage.getItem(`ir_active_tab_${this.currentId}`);
+               if (savedTab && this.$tabButtons.filter(`[data-tab="${savedTab}"]`).length) {
+                   this.switchTab(savedTab);
+               } else {
+                   const firstTabId = this.$tabButtons.first().data('tab');
+                   this.switchTab(firstTabId);
+               }
+           } catch (error) {
+               const firstTabId = this.$tabButtons.first().data('tab');
+               this.switchTab(firstTabId);
+           }
+       }
 
-        async load(id) {
-            if (this.isLoading) return;
+       async handleHashChange() {
+           const id = irHelper.getHashId();
+           if (id) {
+               await this.load(id);
+           } else {
+               this.hide();
+           }
+       }
 
-            this.isLoading = true;
-            this.showLoading();
-            
-            try {
-                this.currentId = id;
-                await this.options.onLoad(id);
-                
-                this.tabsInitialized = false;
-                const initialized = this.initializeTabs();
-                
-                if (initialized) {
-                    this.hideLoading();
-                    this.show();
-                    this.loadSavedTab();
-                } else {
-                    throw new Error('Failed to initialize tabs');
-                }
-            } catch (error) {
-                this.hideLoading();
-                irToast.error('Gagal memuat detail');
-            } finally {
-                this.isLoading = false;
-            }
-        }
+       async load(id) {            
+           if (this.isLoading) {
+               console.log('[DetailPanel] Already loading, skipping');
+               return;
+           }
 
-        show() {
-            this.hideLoading();
-            this.$detailContent.addClass('active').show();
-            this.$content.show();
-            this.options.onShow();
-        }
+           console.log('[DetailPanel] Starting load for ID:', id);
+           this.isLoading = true;
+           this.showLoading();
+           
+           try {
+               this.currentId = id;
+               await this.options.onLoad(id);
+               
+               // Re-initialize tabs after content is loaded
+               this.tabsInitialized = false;
+               const initialized = this.initializeTabs();
+               
+               if (initialized) {
+                   this.hideLoading();
+                   this.show();
+                   this.loadSavedTab();
+               } else {
+                   console.error('[DetailPanel] Failed to initialize tabs after load');
+                   throw new Error('Tab initialization failed');
+               }
+           } catch (error) {
+               console.error('[DetailPanel] Load error:', error);
+               this.hideLoading();
+               irToast.error('Gagal memuat detail');
+           } finally {
+               this.isLoading = false;
+           }
+       }
 
-        hide() {
-            this.hideLoading();
-            this.$detailContent.removeClass('active').hide();
-            this.$content.hide();
-            this.options.onHide();
-        }
+       show() {
+           console.log('[DetailPanel] Showing panel');
+           this.$detailContent.addClass('active').show();
+           this.$content.show();
+           this.$loading.hide();
+           this.options.onShow();
+       }
 
-        showLoading() {
-            if (this.$content) {
-                this.$content.hide();
-            }
-            if (this.$loading) {
-                this.$loading.show();
-            }
-        }
+       hide() {
+           console.log('[DetailPanel] Hiding panel');
+           this.$detailContent.removeClass('active').hide();
+           this.$content.hide();
+           this.$loading.hide();
+           this.options.onHide();
+       }
 
-        hideLoading() {
-            if (this.$loading) {
-                this.$loading.hide();
-            }
-            if (this.$content) {
-                this.$content.show();
-            }
-        }
+       showLoading() {
+           console.log('[DetailPanel] Showing loading', {
+               loadingElement: this.$loading,
+               visible: this.$loading.is(':visible')
+           });
+           if(this.$loading.length) {
+               this.$loading.show();
+               if(this.$content.length) {
+                   this.$content.hide();
+               }
+           }
+       }
 
-        // Add CSS for spinner
-        static injectStyles() {
-            const styles = `
-                .ir-spinner-container {
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    height: 200px;
-                }
-                .ir-spinner {
-                    width: 40px;
-                    height: 40px;
-                    border: 3px solid #f3f3f3;
-                    border-top: 3px solid #2271b1;
-                    border-radius: 50%;
-                    animation: spin 1s linear infinite;
-                }
-                @keyframes spin {
-                    0% { transform: rotate(0deg); }
-                    100% { transform: rotate(360deg); }
-                }
-            `;
-            
-            const styleElement = document.createElement('style');
-            styleElement.textContent = styles;
-            document.head.appendChild(styleElement);
-        }
+       hideLoading() {
+           console.log('[DetailPanel] Hiding loading', {
+               loadingElement: this.$loading,
+               visible: this.$loading.is(':visible')
+           });
+           if(this.$loading.length) {
+               this.$loading.hide();
+               if(this.$content.length) {
+                   this.$content.show();
+               }
+           }
+       }
 
-        // Rest of the methods remain unchanged...
-    }
+       destroy() {            
+           // Cleanup events
+           $(window).off('hashchange.detailPanel');
+           this.$detailContent.off('click.detailPanel');
+           
+           // Clear state
+           this.currentId = null;
+           this.activeTab = null;
+           this.isInitialized = false;
+           this.tabsInitialized = false;
+           this.isLoading = false;
+           
+           // Clear DOM references  
+           this.$tabButtons = null;
+           this.$tabContents = null;
 
-    // Inject spinner styles when script loads
-    DetailPanel.injectStyles();
+           console.log('[DetailPanel] Destroyed');
+       }
+   }
 
-    // Export DetailPanel
-    window.irDetailPanel = DetailPanel;
+   // Export DetailPanel
+   window.irDetailPanel = DetailPanel;
 
 })(jQuery);
